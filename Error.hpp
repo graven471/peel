@@ -7,7 +7,10 @@
 
 #include <windows.h>
 
+#include <cstdint>
+
 #include <expected>
+#include <optional>
 
 enum class PeelErrorCode : uint32_t {
 	PEEL_UNKNOWN,
@@ -84,23 +87,38 @@ enum class PeelErrorCode : uint32_t {
 struct PeelError {
 	PeelErrorCode Code = PeelErrorCode::PEEL_UNKNOWN;
 	std::source_location Location = std::source_location::current();
-	DWORD Win32Code;
+	std::optional<uint32_t> Win32Code;
 
-	constexpr PeelError(PeelErrorCode InCode, DWORD InWin32Code = ::GetLastError(), std::source_location InLocation = std::source_location::current())
+	constexpr PeelError(PeelErrorCode InCode, std::optional<uint32_t> InWin32Code = std::nullopt, std::source_location InLocation = std::source_location::current())
 		noexcept : Code(InCode), Win32Code(InWin32Code), Location(InLocation) {
 	}
 
 	[[nodiscard]] std::string ToString() const {
+		if (Win32Code) {
+			return std::format(
+				"PeelError {{\n"
+				"    code:     {}\n"
+				"    win32:    {} (0x{:08X})\n"
+				"    location: {}:{}:{}\n"
+				"    function: {}\n"
+				"}}",
+				CodeToString(),
+				*Win32Code,
+				*Win32Code,
+				Location.file_name(),
+				Location.line(),
+				Location.column(),
+				Location.function_name()
+			);
+		}
+
 		return std::format(
 			"PeelError {{\n"
 			"    code:     {}\n"
-			"    win32:    {} (0x{:08X})\n"
 			"    location: {}:{}:{}\n"
 			"    function: {}\n"
 			"}}",
 			CodeToString(),
-			Win32Code,
-			Win32Code,
 			Location.file_name(),
 			Location.line(),
 			Location.column(),
@@ -278,7 +296,7 @@ private:
 	}
 };
 
-constexpr PeelErrorCode TranslateToPeelError(DWORD ErrorCode = ::GetLastError()) noexcept {
+constexpr PeelErrorCode TranslateToPeelError(uint32_t ErrorCode = ::GetLastError()) noexcept {
 	switch (ErrorCode) {
 	case ERROR_SUCCESS:
 		return PeelErrorCode::PEEL_SUCCESS;
@@ -332,7 +350,15 @@ constexpr PeelErrorCode TranslateToPeelError(DWORD ErrorCode = ::GetLastError())
 	}
 }
 
-[[nodiscard]] PeelError MakePeelError(DWORD ErrorCode, std::source_location Location = std::source_location::current()) noexcept {
+[[nodiscard]] inline PeelError MakePeelError(uint32_t ErrorCode, std::source_location Location = std::source_location::current()) noexcept {
+	return PeelError{
+		TranslateToPeelError(ErrorCode),
+		ErrorCode,
+		Location
+	};
+}
+
+[[nodiscard]] PeelError inline MakeWin32Error(uint32_t ErrorCode, std::source_location Location = std::source_location::current()) noexcept {
 	return PeelError{
 		TranslateToPeelError(ErrorCode),
 		ErrorCode,

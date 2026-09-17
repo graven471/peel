@@ -17,20 +17,21 @@
 #include <span>
 #include <cstddef>
 #include "Error.hpp"
+#include "Parser.hpp"
 
 [[nodiscard]] static PeelResult<std::span<const std::byte>> MapFile(const std::string& InFileName) {
 	// use A prefix for now 
 	HANDLE HFile = CreateFileA(InFileName.c_str(), GENERIC_READ, NULL, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_READONLY, NULL);
 
 	if (HFile == INVALID_HANDLE_VALUE) {
-		return std::unexpected(MakePeelError(::GetLastError()));
+		return std::unexpected(MakeWin32Error(::GetLastError()));
 	}
 
 	// get the file size
 	LARGE_INTEGER FileSize;
 
 	if (GetFileSizeEx(HFile, &FileSize) == 0) {
-		return std::unexpected(MakePeelError(::GetLastError()));
+		return std::unexpected(MakeWin32Error(::GetLastError()));
 	}
 
 	// create file mapping aka describing backing store
@@ -38,7 +39,7 @@
 
 	if (HMapping == NULL) {
 		CloseHandle(HFile);
-		return std::unexpected(MakePeelError(::GetLastError()));
+		return std::unexpected(MakeWin32Error(::GetLastError()));
 	}
 
 	// CreateFileMapping keeps the mapping alive internally
@@ -48,14 +49,7 @@
 	LPVOID BasePtr = MapViewOfFile(HMapping, FILE_MAP_READ, 0, 0, 0);
 
 	if (BasePtr == NULL) {
-		return std::unexpected(MakePeelError(::GetLastError()));
-	}
-
-	char* contents = reinterpret_cast<char*>(BasePtr);
-
-	for (int i = 0; i < 64; ++i) {
-		std::print("{:02X} ", (unsigned char)contents[i]);
-		if ((i + 1) % 16 == 0) std::println();
+		return std::unexpected(MakeWin32Error(::GetLastError()));
 	}
 
 	return std::span<const std::byte>{ static_cast<const std::byte*>(BasePtr), static_cast<std::size_t>(FileSize.QuadPart) };
@@ -78,7 +72,16 @@ int main(int argc, const char* argv[]) {
 
 	std::println("filename: {}", FileName);
 
-	if (PeelResult<std::span<const std::byte>> Result = MapFile(FileName); !Result) {
+	PeelResult<std::span<const std::byte>> Mapping = MapFile(FileName);
+
+	if (!Mapping) {
+		std::println(stderr, "\033[31mError: \033[0m {}", Mapping.error().ToString());
+		return EXIT_FAILURE;
+	}
+
+	PEParser Parser{ *Mapping };
+
+	if (auto Result = Parser.Parse(); !Result) {
 		std::println(stderr, "\033[31mError: \033[0m {}", Result.error().ToString());
 		return EXIT_FAILURE;
 	}
