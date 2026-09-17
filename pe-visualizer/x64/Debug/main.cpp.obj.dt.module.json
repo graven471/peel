@@ -1,0 +1,14 @@
+{
+    "version": 1,
+    "revision": 0,
+    "rules": [
+        {
+            "primary-output": "pe-visualizer\\x64\\Debug\\main.obj",
+            "outputs": [
+                "pe-visualizer\\x64\\Debug\\main.cpp.obj.dt.module.json",
+                "pe-visualizer\\x64\\Debug\\main.cpp.obj.dt.d.json"
+            ],
+            "requires": []
+        }
+    ]
+}
