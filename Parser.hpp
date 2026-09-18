@@ -1,19 +1,34 @@
 #pragma once
 
-#include <span>
 #include "Error.hpp"
 #include "PETypes.hpp"
+#include <span>
+#include <vector>
+
+struct PEImage {
+  ImageDosHeader DosHeader;
+  ImageNTHeaders NTHeaders;
+  std::vector<ImageSectionHeader> SectionHeaders;
+};
 
 class PEParser {
 public:
-	explicit PEParser(std::span<const std::byte> InMappedBytes) : MappedBytes(InMappedBytes) {};
+  explicit PEParser(std::span<const std::byte> InMappedBytes)
+      : MappedBytes(InMappedBytes) {};
 
-	PeelResult<void> Parse();
+  PeelResult<PEImage> Parse();
 
 private:
-	PeelResult<DosHeader> ParseDosHeader(std::span<const std::byte> InDosHeader);
-	PeelResult<FileHeader> ParseFileHeader(std::span<const std::byte> InImageHeader);
-	PeelResult<OptionalHeader> ParseOptionalHeader(std::span<const std::byte> InOptionalHeader);
+  PeelResult<ImageDosHeader>
+  ParseDosHeader(std::span<const std::byte> InDosHeader);
+  PeelResult<ImageFileHeader>
+  ParseFileHeader(std::span<const std::byte> InImageHeader);
+  PeelResult<ImageOptionalHeader>
+  ParseOptionalHeader(std::span<const std::byte> InOptionalHeader);
 
-	std::span<const std::byte> MappedBytes{};
+  PeelResult<std::vector<ImageSectionHeader>>
+  ParseSectionHeader(std::span<const std::byte> InSectionHeader,
+                     uint32_t TotalSections);
+
+  std::span<const std::byte> MappedBytes{};
 };
