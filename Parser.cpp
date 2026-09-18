@@ -42,7 +42,7 @@ image size to 2 GB
 
 // return void for now later return a struct that represent full parsed valid PE
 // file data so that i can feed to GUI or CLI or dumb etc
-PeelResult<PEImage> PEParser::Parse() {
+[[nodiscard]] PeelResult<PEImage> PEParser::Parse() {
   PeelResult<ImageDosHeader> DosHeader =
       ParseDosHeader(MappedBytes.subspan(0, sizeof(ImageDosHeader)));
 
@@ -76,6 +76,20 @@ PeelResult<PEImage> PEParser::Parse() {
       [](auto &&Header) {
         std::println("Format: \t {}", PEFormatToStringView(Header.Format));
 
+        ImageDataDirectory &ImportDir =
+            Header.ImageDataDirectory[(uint8_t)DataDirectoryIndex::Import];
+
+        if (ImportDir.VirtualAddress != 0 && ImportDir.Size != 0) {
+          // parse
+        }
+
+        ImageDataDirectory &ExportDir =
+            Header.ImageDataDirectory[(uint8_t)DataDirectoryIndex::Export];
+
+        if (ExportDir.VirtualAddress != 0 && ExportDir.Size != 0) {
+          // parse
+        }
+
         std::println("Subsystem: \t {}",
                      ImageSubSystemToStringView(Header.Subsystem));
       },
@@ -90,18 +104,17 @@ PeelResult<PEImage> PEParser::Parse() {
       DosHeader->LfaNew + sizeof(SIGNATURE) + sizeof(ImageFileHeader) +
       FileHeader->SizeOfOptionalHeader;
 
-  PeelResult<std::vector<ImageSectionHeader>> SectionHeaders =
-      ParseSectionHeader(MappedBytes.subspan(SectionHeaderOffset,
-                                             FileHeader->NumberOfSections *
-                                                 sizeof(ImageSectionHeader)),
-                         FileHeader->NumberOfSections);
+  PeelResult<std::vector<ImageSection>> Sections = ParseSectionHeader(
+      MappedBytes.subspan(SectionHeaderOffset, FileHeader->NumberOfSections *
+                                                   sizeof(ImageSectionHeader)),
+      FileHeader->NumberOfSections);
 
-  if (!SectionHeaders)
-    return std::unexpected(SectionHeaders.error());
+  if (!Sections)
+    return std::unexpected(Sections.error());
 
   return PEImage{.DosHeader = *DosHeader,
                  .NTHeaders = NTHeaders,
-                 .SectionHeaders = std::move(*SectionHeaders)};
+                 .SectionHeaders = std::move(*Sections)};
 }
 
 PeelResult<ImageDosHeader>
@@ -159,23 +172,40 @@ PEParser::ParseOptionalHeader(std::span<const std::byte> InOptionalHeader) {
   }
 }
 
-PeelResult<std::vector<ImageSectionHeader>>
+PeelResult<std::vector<ImageSection>>
 PEParser::ParseSectionHeader(std::span<const std::byte> InSectionHeader,
                              uint32_t TotalSections) {
   // todo: do validation
-  std::vector<ImageSectionHeader> Sections(TotalSections);
+  std::vector<ImageSection> Sections(TotalSections);
 
-  std::memcpy(Sections.data(), InSectionHeader.data(), InSectionHeader.size());
+  for (std::size_t Index = 0; Index < TotalSections; Index++) {
 
-  for (const auto &Header : Sections) {
-    std::println("Name: \t {}{}{}{}{}{}{}{}", Header.Name[0], Header.Name[1],
-                 Header.Name[2], Header.Name[3], Header.Name[4], Header.Name[5],
-                 Header.Name[6], Header.Name[7]);
+    const uint32_t Offset = Sections[Index].Header.PointerToRawData;
+    const uint32_t Size = Sections[Index].Header.SizeOfRawData;
 
-    std::println("Addr: \t 0x{:02X}", Header.VirtualAddress);
+    if (Offset > MappedBytes.size() || Size > MappedBytes.size() - Offset) {
+      return std::unexpected(PeelError{PeelErrorCode::PEEL_INVALID_SECTION});
+    }
+
+    std::memcpy(&Sections[Index].Header,
+                InSectionHeader.data() + Index * sizeof(ImageSectionHeader),
+                sizeof(ImageSectionHeader));
+
+    // view of bytes on disk
+    Sections[Index].Data = MappedBytes.subspan(Offset, Size);
+
+    // debug
+    std::println("Name: \t {}{}{}{}{}{}{}{}", Sections[Index].Header.Name[0],
+                 Sections[Index].Header.Name[1], Sections[Index].Header.Name[2],
+                 Sections[Index].Header.Name[3], Sections[Index].Header.Name[4],
+                 Sections[Index].Header.Name[5], Sections[Index].Header.Name[6],
+                 Sections[Index].Header.Name[7]);
+
+    std::println("Addr: \t 0x{:02X}", Sections[Index].Header.VirtualAddress);
 
     std::println("Flag: \t {}",
-                 ImageSectionFlagsToString((uint32_t)Header.Characteristics));
+                 ImageSectionFlagsToString(
+                     (uint32_t)Sections[Index].Header.Characteristics));
   }
 
   return Sections;

@@ -100,6 +100,8 @@ struct ImageFileHeader {
   uint16_t NumberOfSections;
   uint32_t TimeDateStamp;
   uint32_t PointerToSymbolTable;
+
+  // total symbols in image
   uint32_t NumberOfSymbols;
   uint16_t SizeOfOptionalHeader;
   FileCharacteristics Characteristics;
@@ -417,6 +419,25 @@ struct ImageSectionHeader {
 
 static_assert(sizeof(ImageSectionHeader) == 40 &&
               "Section header must be 40 bytes");
+
+struct ImageImportDescriptor {
+  // RVA of Import Lookup Table (ILT/INT)
+  // contains name or ordinal for each import.
+  uint32_t OriginalFirstThunk;
+  // the time date stamp is set to zero until image is bound.  After the image
+  // is bound, this field is set to the time/data stamp of the DLL
+  uint32_t TimeDateStamp;
+  // the index of the first forward reference
+  uint32_t ForwardChain;
+  // the address of ASCII string that contains the name of the DLL
+  uint32_t Name;
+  // RVA of the import Address Table (IAT)
+  // The contents of this table are identical to the contents of the import
+  // lookup table until the image is bound.
+  uint32_t FirstThunk;
+};
+
+static_assert(sizeof(ImageImportDescriptor) == 20);
 
 // =================utilities===============================
 // todo: put somewhere else
