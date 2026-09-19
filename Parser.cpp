@@ -153,7 +153,12 @@ PeelResult<std::vector<ImageSection>> PEParser::ParseSectionHeader(
     std::span<const std::byte> InSectionHeader, uint32_t TotalSections) {
   std::vector<ImageSection> Sections(TotalSections);
 
+  // TODO: handle this in better way
   for (std::size_t Index = 0; Index < TotalSections; Index++) {
+    std::memcpy(&Sections[Index].Header,
+                InSectionHeader.data() + Index * sizeof(ImageSectionHeader),
+                sizeof(ImageSectionHeader));
+
     const uint32_t Offset = Sections[Index].Header.PointerToRawData;
     const uint32_t Size = Sections[Index].Header.SizeOfRawData;
 
@@ -161,10 +166,6 @@ PeelResult<std::vector<ImageSection>> PEParser::ParseSectionHeader(
         [[unlikely]] {
       return std::unexpected(PeelError{PeelErrorCode::PEEL_INVALID_SECTION});
     }
-
-    std::memcpy(&Sections[Index].Header,
-                InSectionHeader.data() + Index * sizeof(ImageSectionHeader),
-                sizeof(ImageSectionHeader));
 
     // view of bytes on disk
     Sections[Index].Data = MappedBytes.subspan(Offset, Size);
@@ -210,7 +211,7 @@ std::vector<Import> PEParser::ParseImportSection(
       std::optional<uint32_t> ImportByNameOffset =
           RvaToFileOffset(static_cast<uint32_t>(Entry), SectionHeader);
 
-      if (!ImportByNameOffset) [[unlikey]]
+      if (!ImportByNameOffset) [[unlikely]]
         continue;
 
       auto ImportByName = MappedBytes.subspan(*ImportByNameOffset);

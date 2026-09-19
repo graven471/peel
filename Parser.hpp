@@ -6,27 +6,6 @@
 #include "Error.hpp"
 #include "PETypes.hpp"
 
-struct ImageSection {
-  ImageSectionHeader Header;
-
-  // Header.PointerToRawData..Header.SizeOfRawData raw bytes belonging to this
-  // section in the PE file
-  std::span<const std::byte> Data;
-};
-
-struct Import {
-  ImageImportDescriptor Descriptor;
-  std::string_view DLLName{};
-  std::vector<std::string_view> Names{};
-};
-
-struct PEImage {
-  ImageDosHeader DosHeader;
-  ImageNTHeaders NTHeaders;
-  std::vector<ImageSection> SectionHeaders;
-  std::vector<Import> Imports;
-};
-
 class PEParser {
  public:
   explicit PEParser(std::span<const std::byte> InMappedBytes)

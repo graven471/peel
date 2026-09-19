@@ -18,6 +18,7 @@
 #include <span>
 #include <string>
 
+#include "Disassembler.hpp"
 #include "Error.hpp"
 #include "Parser.hpp"
 
@@ -96,13 +97,9 @@ int main(int argc, const char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  for (const auto& Import : Image->Imports) {
-    std::println("DLL: \t {}", Import.DLLName);
+  Disassembler Diasas{&*Image};
 
-    for (const auto& Name : Import.Names) {
-      std::println("Func: \t {}", Name);
-    }
-  }
+  Diasas.DoIt();
 
   return EXIT_SUCCESS;
 }

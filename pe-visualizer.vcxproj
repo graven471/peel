@@ -143,10 +143,12 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Disassembler.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Parser.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Disassembler.hpp" />
     <ClInclude Include="Error.hpp" />
     <ClInclude Include="Parser.hpp" />
     <ClInclude Include="PETypes.hpp" />
