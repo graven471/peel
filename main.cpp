@@ -13,15 +13,16 @@
 
 #include <windows.h>
 
-#include "Error.hpp"
-#include "Parser.hpp"
 #include <cstddef>
 #include <print>
 #include <span>
 #include <string>
 
-[[nodiscard]] static PeelResult<std::span<const std::byte>>
-MapFile(const std::string &InFileName) {
+#include "Error.hpp"
+#include "Parser.hpp"
+
+[[nodiscard]] static PeelResult<std::span<const std::byte>> MapFile(
+    const std::string& InFileName) {
   // use A prefix for now
   HANDLE HFile = CreateFileA(InFileName.c_str(), GENERIC_READ, NULL, NULL,
                              OPEN_EXISTING, FILE_ATTRIBUTE_READONLY, NULL);
@@ -56,11 +57,11 @@ MapFile(const std::string &InFileName) {
   }
 
   return std::span<const std::byte>{
-      static_cast<const std::byte *>(BasePtr),
+      static_cast<const std::byte*>(BasePtr),
       static_cast<std::size_t>(FileSize.QuadPart)};
 }
 
-int main(int argc, const char *argv[]) {
+int main(int argc, const char* argv[]) {
   if (argc < 2) {
     std::println(stderr, "Usage: peel <file.exe>");
     return EXIT_FAILURE;
@@ -88,10 +89,19 @@ int main(int argc, const char *argv[]) {
 
   PEParser Parser{*Mapping};
 
-  if (auto Result = Parser.Parse(); !Result) {
-    std::println(stderr, "\033[31mError: \033[0m {}",
-                 Result.error().ToString());
+  PeelResult<PEImage> Image = Parser.Parse();
+
+  if (!Image) {
+    std::println(stderr, "\033[31mError: \033[0m {}", Image.error().ToString());
     return EXIT_FAILURE;
+  }
+
+  for (const auto& Import : Image->Imports) {
+    std::println("DLL: \t {}", Import.DLLName);
+
+    for (const auto& Name : Import.Names) {
+      std::println("Func: \t {}", Name);
+    }
   }
 
   return EXIT_SUCCESS;

@@ -46,15 +46,13 @@ image size to 2 GB
   PeelResult<ImageDosHeader> DosHeader =
       ParseDosHeader(MappedBytes.subspan(0, sizeof(ImageDosHeader)));
 
-  if (!DosHeader)
-    return std::unexpected(DosHeader.error());
+  if (!DosHeader) return std::unexpected(DosHeader.error());
 
   // [PE_SIGNATURE | FileHeader (20 bytes) | OptionalHeader]
   PeelResult<ImageFileHeader> FileHeader = ParseFileHeader(MappedBytes.subspan(
       DosHeader->LfaNew, sizeof(ImageFileHeader) + SIGNATURE.size()));
 
-  if (!FileHeader)
-    return std::unexpected(FileHeader.error());
+  if (!FileHeader) return std::unexpected(FileHeader.error());
 
   // every image file has an optional header header that provides info to
   // loader. this header is optional in object files, for image files this
@@ -67,33 +65,9 @@ image size to 2 GB
       ParseOptionalHeader(MappedBytes.subspan(
           OptionalHeaderOffset, FileHeader->SizeOfOptionalHeader));
 
-  if (!OptionalHeader)
-    return std::unexpected(OptionalHeader.error());
+  if (!OptionalHeader) return std::unexpected(OptionalHeader.error());
 
   std::println("Machine: \t {}", MachineToStringView(FileHeader->Machine));
-
-  std::visit(
-      [](auto &&Header) {
-        std::println("Format: \t {}", PEFormatToStringView(Header.Format));
-
-        ImageDataDirectory &ImportDir =
-            Header.ImageDataDirectory[(uint8_t)DataDirectoryIndex::Import];
-
-        if (ImportDir.VirtualAddress != 0 && ImportDir.Size != 0) {
-          // parse
-        }
-
-        ImageDataDirectory &ExportDir =
-            Header.ImageDataDirectory[(uint8_t)DataDirectoryIndex::Export];
-
-        if (ExportDir.VirtualAddress != 0 && ExportDir.Size != 0) {
-          // parse
-        }
-
-        std::println("Subsystem: \t {}",
-                     ImageSubSystemToStringView(Header.Subsystem));
-      },
-      *OptionalHeader);
 
   ImageNTHeaders NTHeaders{
       .FileHeader = *FileHeader,
@@ -109,16 +83,19 @@ image size to 2 GB
                                                    sizeof(ImageSectionHeader)),
       FileHeader->NumberOfSections);
 
-  if (!Sections)
-    return std::unexpected(Sections.error());
+  if (!Sections) return std::unexpected(Sections.error());
+
+  std::vector<Import> Imports =
+      ParseImportSection(*Sections, NTHeaders.OptionalHeader);
 
   return PEImage{.DosHeader = *DosHeader,
                  .NTHeaders = NTHeaders,
-                 .SectionHeaders = std::move(*Sections)};
+                 .SectionHeaders = std::move(*Sections),
+                 .Imports = std::move(Imports)};
 }
 
-PeelResult<ImageDosHeader>
-PEParser::ParseDosHeader(std::span<const std::byte> InDosHeader) {
+PeelResult<ImageDosHeader> PEParser::ParseDosHeader(
+    std::span<const std::byte> InDosHeader) {
   ImageDosHeader Header{};
   std::memcpy(&Header, InDosHeader.data(), sizeof(ImageDosHeader));
 
@@ -129,8 +106,8 @@ PEParser::ParseDosHeader(std::span<const std::byte> InDosHeader) {
   return Header;
 }
 
-PeelResult<ImageFileHeader>
-PEParser::ParseFileHeader(std::span<const std::byte> InImageHeader) {
+PeelResult<ImageFileHeader> PEParser::ParseFileHeader(
+    std::span<const std::byte> InImageHeader) {
   if (!std::ranges::equal(SIGNATURE,
                           InImageHeader.subspan(0, SIGNATURE.size()))) {
     return std::unexpected(PeelError{PeelErrorCode::PEEL_INVALID_SIGNATURE});
@@ -144,46 +121,44 @@ PEParser::ParseFileHeader(std::span<const std::byte> InImageHeader) {
   return Header;
 }
 
-PeelResult<ImageOptionalHeader>
-PEParser::ParseOptionalHeader(std::span<const std::byte> InOptionalHeader) {
+PeelResult<ImageOptionalHeader> PEParser::ParseOptionalHeader(
+    std::span<const std::byte> InOptionalHeader) {
   uint16_t Magic{0};
 
   std::memcpy(&Magic, InOptionalHeader.subspan(0, sizeof(uint16_t)).data(),
               sizeof(uint16_t));
 
   switch (static_cast<PEFormat>(Magic)) {
-  case PEFormat::PE32: {
-    ImageOptionalHeader32 Header{};
-    std::memcpy(&Header, InOptionalHeader.data(),
-                sizeof(ImageOptionalHeader32));
-    return ImageOptionalHeader{Header};
-  }
+    case PEFormat::PE32: {
+      ImageOptionalHeader32 Header{};
+      std::memcpy(&Header, InOptionalHeader.data(),
+                  sizeof(ImageOptionalHeader32));
+      return ImageOptionalHeader{Header};
+    }
 
-  case PEFormat::PE64: {
-    ImageOptionalHeader64 Header{};
-    std::memcpy(&Header, InOptionalHeader.data(),
-                sizeof(ImageOptionalHeader64));
-    return ImageOptionalHeader{Header};
-  }
+    case PEFormat::PE64: {
+      ImageOptionalHeader64 Header{};
+      std::memcpy(&Header, InOptionalHeader.data(),
+                  sizeof(ImageOptionalHeader64));
+      return ImageOptionalHeader{Header};
+    }
 
-  default:
-    return std::unexpected(
-        PeelError{PeelErrorCode::PEEL_UNSUPPORTED_PE_VERSION});
+    default:
+      return std::unexpected(
+          PeelError{PeelErrorCode::PEEL_UNSUPPORTED_PE_VERSION});
   }
 }
 
-PeelResult<std::vector<ImageSection>>
-PEParser::ParseSectionHeader(std::span<const std::byte> InSectionHeader,
-                             uint32_t TotalSections) {
-  // todo: do validation
+PeelResult<std::vector<ImageSection>> PEParser::ParseSectionHeader(
+    std::span<const std::byte> InSectionHeader, uint32_t TotalSections) {
   std::vector<ImageSection> Sections(TotalSections);
 
   for (std::size_t Index = 0; Index < TotalSections; Index++) {
-
     const uint32_t Offset = Sections[Index].Header.PointerToRawData;
     const uint32_t Size = Sections[Index].Header.SizeOfRawData;
 
-    if (Offset > MappedBytes.size() || Size > MappedBytes.size() - Offset) {
+    if (Offset > MappedBytes.size() || Size > MappedBytes.size() - Offset)
+        [[unlikely]] {
       return std::unexpected(PeelError{PeelErrorCode::PEEL_INVALID_SECTION});
     }
 
@@ -209,4 +184,120 @@ PEParser::ParseSectionHeader(std::span<const std::byte> InSectionHeader,
   }
 
   return Sections;
+}
+
+// TODO: not a fastest or solid implementation comeback and improve it
+std::vector<Import> PEParser::ParseImportSection(
+    std::span<const ImageSection> Sections,
+    ImageOptionalHeader& OptionalHeader) {
+  auto ParseFunctionNames = [&](uint32_t ImportLookupTableOffset,
+                                const ImageSectionHeader& SectionHeader,
+                                std::vector<std::string_view>& Names) {
+    for (std::size_t Index = 0;; Index++) {
+      // ILT entry -> IMAGE_IMPORT_BY_NAME (hint, name)
+
+      // todo: handle PE32 in that case this is uint32_t
+      uint64_t Entry;
+
+      std::memcpy(&Entry,
+                  MappedBytes.data() + ImportLookupTableOffset +
+                      Index * sizeof(uint64_t),
+                  sizeof(Entry));
+
+      // last entry is Null
+      if (Entry == 0) break;
+
+      std::optional<uint32_t> ImportByNameOffset =
+          RvaToFileOffset(static_cast<uint32_t>(Entry), SectionHeader);
+
+      if (!ImportByNameOffset) [[unlikey]]
+        continue;
+
+      auto ImportByName = MappedBytes.subspan(*ImportByNameOffset);
+
+      // skip hint first 2 bytes
+      auto NameBytes = ImportByName.subspan(2);
+
+      auto It = std::ranges::find(NameBytes, std::byte{0});
+
+      // bad Image no null terminator
+      if (It == NameBytes.end()) [[unlikely]]
+        break;
+
+      auto NameLength = std::distance(NameBytes.begin(), It);
+
+      Names.emplace_back(reinterpret_cast<const char*>(NameBytes.data()),
+                         static_cast<std::size_t>(NameLength));
+    }
+  };
+
+  return std::visit(
+      [&](auto&& Header) -> std::vector<Import> {
+        ImageDataDirectory& ImportDir =
+            Header.ImageDataDirectory[(uint8_t)DataDirectoryIndex::Import];
+
+        std::size_t DescriptorCount =
+            ImportDir.Size / sizeof(ImageImportDescriptor);
+
+        std::vector<Import> Imports;
+        Imports.resize(DescriptorCount);
+
+        if (ImportDir.VirtualAddress == 0 && ImportDir.Size == 0) [[unlikely]]
+          return {};
+
+        for (const auto& Section : Sections) {
+          std::optional<uint32_t> FileOffset =
+              RvaToFileOffset(ImportDir.VirtualAddress, Section.Header);
+
+          if (!FileOffset) continue;
+
+          std::span<const std::byte> ImportData =
+              MappedBytes.subspan(*FileOffset, ImportDir.Size);
+
+          for (std::size_t Index = 0; Index < DescriptorCount; ++Index) {
+            std::memcpy(
+                &Imports[Index].Descriptor,
+                ImportData.data() + Index * sizeof(ImageImportDescriptor),
+                sizeof(ImageImportDescriptor));
+
+            auto DLLNameOffset =
+                RvaToFileOffset(Imports[Index].Descriptor.Name, Section.Header);
+
+            if (!DLLNameOffset) continue;
+
+            auto DLLNameBytes = MappedBytes.subspan(*DLLNameOffset);
+
+            auto It = std::ranges::find(DLLNameBytes, std::byte{0});
+
+            // bad Image no null terminator
+            if (It == DLLNameBytes.end()) [[unlikely]]
+              break;
+
+            auto DLLNameLength = std::distance(DLLNameBytes.begin(), It);
+
+            Imports[Index].DLLName = std::string_view{
+                reinterpret_cast<const char*>(DLLNameBytes.data()),
+                static_cast<std::size_t>(DLLNameLength)};
+
+            std::optional<uint32_t> ImportLookupTableOffset = RvaToFileOffset(
+                Imports[Index].Descriptor.OriginalFirstThunk, Section.Header);
+
+            if (!ImportLookupTableOffset) continue;
+
+            ParseFunctionNames(*ImportLookupTableOffset, Section.Header,
+                               Imports[Index].Names);
+
+            if (Imports[Index].Descriptor.OriginalFirstThunk == 0 &&
+                Imports[Index].Descriptor.TimeDateStamp == 0 &&
+                Imports[Index].Descriptor.ForwardChain == 0 &&
+                Imports[Index].Descriptor.Name == 0 &&
+                Imports[Index].Descriptor.FirstThunk == 0)
+              break;
+          }
+        }
+
+        return Imports;
+      },
+
+      OptionalHeader);
 }
