@@ -18,9 +18,9 @@
 #include <span>
 #include <string>
 
-#include "Disassembler.hpp"
-#include "Error.hpp"
-#include "Parser.hpp"
+#include "Core/Error.hpp"
+#include "Disassembly/Disassembler.hpp"
+#include "Parser/Parser.hpp"
 
 [[nodiscard]] static PeelResult<std::span<const std::byte>> MapFile(
     const std::string& InFileName) {

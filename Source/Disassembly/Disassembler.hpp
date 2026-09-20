@@ -1,6 +1,6 @@
 #pragma once
 
-#include "PETypes.hpp"
+#include "Parser/PETypes.hpp"
 
 class Disassembler {
  public:
@@ -9,5 +9,7 @@ class Disassembler {
   void DoIt();
 
  private:
+  void PrefixScanner(std::span<const std::byte> InstructionEncoding);
+
   PEImage* Image = nullptr;
 };

@@ -3,7 +3,7 @@
 #include <span>
 #include <vector>
 
-#include "Error.hpp"
+#include "Core/Error.hpp"
 #include "PETypes.hpp"
 
 class PEParser {

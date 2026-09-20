@@ -15,27 +15,27 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
+    <ClCompile Include="Source\Disassembler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Parser.cpp">
+    <ClCompile Include="Source\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Disassembler.cpp">
+    <ClCompile Include="Source\Parser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Parser.hpp">
+    <ClInclude Include="Source\Disassembler.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Error.hpp">
+    <ClInclude Include="Source\Error.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PETypes.hpp">
+    <ClInclude Include="Source\Parser.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Disassembler.hpp">
+    <ClInclude Include="Source\PETypes.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

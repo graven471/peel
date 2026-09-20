@@ -30,52 +30,6 @@ void Disassembler::DoIt() {
   // so don't assume
 
   /*
-    instruction prefix:
-      instruction prefix is divided into four groups, each with a set of
-    allowable prefix code Group 1 through 4 may be placed in any order relative
-    to each other
-
-    GROUP 1: LOCK
-    0xF0 (1111 0000) = LOCK
-    0xF2 (1111 0010) = REPNE/REPNZ
-    0xF3 (1111 0011) = REP or REPE/REPZ
-
-    0XF2 can also also represent BND prefix (intel MPX) ignore that
-
-    GROUP 2: Segment override prefixes
-    0x2E - CS segment override (use with any branch instruction is reversed)
-
-    0x36 - SS segment override prefix (use with any branch instruction is
-    reversed)
-
-    0x3E - DS segment override prefix (use with any branch
-    instruction is reversed)
-
-    0x26 - ES segment override prefix (use with any branch
-    instruction is reversed)
-
-    0x64 - FS segment override prefix (use with any branch
-    instruction is reversed)
-
-    0x65 - GS segment override prefix (use with any branch
-    instruction is reversed)
-
-    Branch hints:
-    - 0x2E - Branch not taken (use only with `Jcc` instructions.)
-    - 0x3E - Branch taken (use only with `Jcc` instructions.)
-
-    GROUP 3:
-    - operand size override prefix is encoded using 0x66 (0x66 is also used as
-    mandatory prefix for some instructions).
-    use a operand size than the instruction will normally use like in 32
-    bit-mode operand is normally 32-bit it can change operand to 16 bit
-
-    GROUP 4:
-     - 0x67 - Address-size override prefix
-     use a different address size when calculating memory addresses
-     normal -> 64-bit addressing
-     67     -> 32-bit addressing
-
     AMD/INTEL 64 REX Prefix only for PE32+ images and note Not all instruction
     require a REX prefix in 64-bit mode.
 
@@ -137,4 +91,19 @@ void Disassembler::DoIt() {
   }
 
   std::println();
+}
+
+void Disassembler::PrefixScanner(
+    std::span<const std::byte> InstructionEncoding) {
+  // for I in instruction encoding:
+  //   is I in legacy group 1-4 prefix ?
+  //   is I in REX prefix ?
+  //   if I is prefix then push I to somewhere (yet to be defined)
+  //   go to next byte I + 1 check if its in prefix
+  //   repeat until we found something that is not prefix
+  //   if not stop and return subspan from there
+  //   [2E 66 3E 48 8B 05 E7 33 03]
+  //    ----------- |
+  //    prefix      new subspan loc
+  // slower but this is first impl can improve performance and speed later
 }
