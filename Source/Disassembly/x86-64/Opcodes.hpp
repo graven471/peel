@@ -200,6 +200,15 @@ enum class OperandCode : uint16_t
   Ma,
   AL,
 
+  // MMX register
+  Q,
+
+  // XMM register
+  W,
+
+  // MMX register
+  N,
+
   Fv,
 
   Ew,
@@ -765,3 +774,10 @@ static constexpr InstructionDesc OPCODE_TABLE[256] = {
     // 0xFF
     {.mnemonic = Mnemonic::GROUP5, .Destination = OperandCode::Ev, .Source = OperandCode::None},
 };
+
+constexpr bool RequiresModRM(OperandCode Code) noexcept
+{
+  return Code == OperandCode::Eb || Code == OperandCode::Ev || Code == OperandCode::Ew || Code == OperandCode::Gb
+         || Code == OperandCode::Gv || Code == OperandCode::GS || Code == OperandCode::M || Code == OperandCode::Q
+         || Code == OperandCode::W || Code == OperandCode::N || Code == OperandCode::Sw;
+}

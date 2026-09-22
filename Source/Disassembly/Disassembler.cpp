@@ -30,7 +30,15 @@ void Disassembler::DoIt()
   std::span<const std::byte> InstructionEncoding = TextSection.Data.subspan(8, 32);
 
   std::span<const std::byte> Rest = PrefixScanner(InstructionEncoding);
+  // let it return opcode either 1, 2, or 3 bytes
   OpCodeScanner(Rest);
+
+  InstructionDesc OpcodeMetadata = OPCODE_TABLE[std::uint8_t{0X08}];
+
+  if(RequiresModRM(OpcodeMetadata.Source) || RequiresModRM(OpcodeMetadata.Destination) || RequiresModRM(OpcodeMetadata.Extra))
+  {
+    // call modrm_scanner
+  }
 }
 
 std::span<const std::byte> Disassembler::PrefixScanner(std::span<const std::byte> Bytes)
