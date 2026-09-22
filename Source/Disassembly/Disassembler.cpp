@@ -38,7 +38,7 @@ void Disassembler::DoIt()
 
   InstructionDesc OpcodeMetadata = OPCODE_TABLE[std::uint8_t{0X08}];
 
-  if(RequiresModRM(OpcodeMetadata.Source) || RequiresModRM(OpcodeMetadata.Destination) || RequiresModRM(OpcodeMetadata.Extra))
+  if(OpcodeMetadata.ModRM)
   {
     // call modrm_scanner
 
