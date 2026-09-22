@@ -214,6 +214,8 @@ enum class OperandCode : uint16_t
   // MMX register
   N,
 
+  CL,
+
   Fv,
 
   Ew,
@@ -288,12 +290,9 @@ enum class OperandCode : uint16_t
   Yz,
   Xb,
   Yv,
-  Yz,
   Xv,
   Xz,
 
-  AL,
-  CL,
   DL,
   BL,
   HL,
