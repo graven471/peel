@@ -9,15 +9,16 @@
 #include "x86-64/Opcodes.hpp"
 #include "x86-64/Prefixes.hpp"
 
-void Disassembler::DoIt() {
+void Disassembler::DoIt()
+{
   constexpr std::array TextName{'.', 't', 'e', 'x', 't', '\0', '\0', '\0'};
 
-  auto It = std::ranges::find_if(
-      Image->SectionHeaders, [&](const ImageSection& Section) {
-        return std::ranges::equal(Section.Header.Name, TextName);
-      });
+  auto It = std::ranges::find_if(Image->SectionHeaders, [&](const ImageSection& Section) {
+    return std::ranges::equal(Section.Header.Name, TextName);
+  });
 
-  if (It == Image->SectionHeaders.end()) {
+  if(It == Image->SectionHeaders.end())
+  {
     std::println(stderr, "no .text section is present");
     return;
   }
@@ -26,15 +27,14 @@ void Disassembler::DoIt() {
 
   ImageSection& TextSection = *It;
 
-  std::span<const std::byte> InstructionEncoding =
-      TextSection.Data.subspan(8, 32);
+  std::span<const std::byte> InstructionEncoding = TextSection.Data.subspan(8, 32);
 
   std::span<const std::byte> Rest = PrefixScanner(InstructionEncoding);
   OpCodeScanner(Rest);
 }
 
-std::span<const std::byte> Disassembler::PrefixScanner(
-    std::span<const std::byte> Bytes) {
+std::span<const std::byte> Disassembler::PrefixScanner(std::span<const std::byte> Bytes)
+{
   // for I in instruction encoding:
   //   is I in legacy group 1-4 prefix ?
   //   is I in REX prefix ?
@@ -83,7 +83,8 @@ std::span<const std::byte> Disassembler::PrefixScanner(
   std::span<const std::byte> Rest = TestBytesSpan.subspan(PrefixCount);
 
   // todo: have some kind of structure or data that stores prefixes and group
-  for (size_t I = 0; I < Prefixes.size(); I++) {
+  for(size_t I = 0; I < Prefixes.size(); I++)
+  {
     std::print("Prefix: 0x{:02x} ", std::to_integer<uint8_t>(Prefixes[I]));
   }
 
@@ -92,7 +93,8 @@ std::span<const std::byte> Disassembler::PrefixScanner(
 
 // note some opcode requires ModR/M and some don't so i have return
 // the info somehow that does opcode needs ModR/M or not
-void Disassembler::OpCodeScanner(std::span<const std::byte> Bytes) {
+void Disassembler::OpCodeScanner(std::span<const std::byte> Bytes)
+{
   // we are assuming that the Bytes[0] will be valid x86-64 opcode
   // opcode can be either 1 byte or 2 bytes or 3 bytes
   // an additional 3-bit opcode field is sometimes encoded in the ModR/M byte
@@ -134,7 +136,8 @@ void Disassembler::OpCodeScanner(std::span<const std::byte> Bytes) {
 
   assert(!Bytes.empty());
 
-  if (Bytes[0] != OPCODE_ESCAPE) {
+  if(Bytes[0] != OPCODE_ESCAPE)
+  {
     // stop store opcode and return Bytes.subspan(1)
     std::println("there is no escape opcode");
     const std::byte Opcode = Bytes[0];
@@ -143,14 +146,15 @@ void Disassembler::OpCodeScanner(std::span<const std::byte> Bytes) {
     return;
   }
 
-  if (Bytes[1] == OPCODE_MAP2_SELECT || Bytes[1] == OPCODE_MAP3_SELECT) {
+  if(Bytes[1] == OPCODE_MAP2_SELECT || Bytes[1] == OPCODE_MAP3_SELECT)
+  {
     assert(Bytes.size() >= 3 &&
            "opcode contains OPCODE_MAP byte so Bytes must need to be atleast "
            "3-bytes");
     std::println("found OPCODE_MAP2_SELECT or OPCODE_MAP3_SELECT");
 
     auto Opcodes = Bytes.first(3);
-    Bytes = Bytes.subspan(3);
+    Bytes        = Bytes.subspan(3);
     return;
   }
 
@@ -162,11 +166,12 @@ void Disassembler::OpCodeScanner(std::span<const std::byte> Bytes) {
   // so opcode is 2-bytes store that and return Bytes.subspan(2)
 
   auto Opcodes = Bytes.first(2);
-  Bytes = Bytes.subspan(2);
+  Bytes        = Bytes.subspan(2);
 
   std::array<std::byte, 2> Opcode = BuildTwoBytesOpcode(Opcodes[1]);
 
-  for (auto& o : Opcode) {
+  for(auto& o : Opcode)
+  {
     std::println("opcode: 0x{:02x}", std::to_integer<std::uint8_t>(o));
   }
 }

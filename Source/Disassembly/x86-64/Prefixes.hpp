@@ -26,27 +26,23 @@
  REX prefix is between 0x40-0x4F
 */
 
-constexpr std::array RexPrefix = {
-    std::byte{0x40}, std::byte{0x41}, std::byte{0x42}, std::byte{0x43},
-    std::byte{0x44}, std::byte{0x45}, std::byte{0x46}, std::byte{0x47},
-    std::byte{0x48}, std::byte{0x49}, std::byte{0x4A}, std::byte{0x4B},
-    std::byte{0x4C}, std::byte{0x4D}, std::byte{0x4E}, std::byte{0x4F}};
+constexpr std::array RexPrefix = {std::byte{0x40}, std::byte{0x41}, std::byte{0x42}, std::byte{0x43},
+                                  std::byte{0x44}, std::byte{0x45}, std::byte{0x46}, std::byte{0x47},
+                                  std::byte{0x48}, std::byte{0x49}, std::byte{0x4A}, std::byte{0x4B},
+                                  std::byte{0x4C}, std::byte{0x4D}, std::byte{0x4E}, std::byte{0x4F}};
 
-constexpr std::array LegacyGroup1Prefixes = {std::byte{0xF0}, std::byte{0xF2},
-                                             std::byte{0xF3}};
+constexpr std::array LegacyGroup1Prefixes = {std::byte{0xF0}, std::byte{0xF2}, std::byte{0xF3}};
 
-constexpr std::array LegacyGroup2Prefixes = {std::byte{0x2E}, std::byte{0x36},
-                                             std::byte{0x3E}, std::byte{0x26},
-                                             std::byte{0x64}, std::byte{0x65}};
+constexpr std::array LegacyGroup2Prefixes = {std::byte{0x2E}, std::byte{0x36}, std::byte{0x3E},
+                                             std::byte{0x26}, std::byte{0x64}, std::byte{0x65}};
 
 constexpr std::byte LegacyGroup3Prefix = std::byte{0x66};
 constexpr std::byte LegacyGroup4Prefix = std::byte{0x67};
 
-constexpr bool IsPrefix(const std::byte byte) noexcept {
-  return std::ranges::contains(LegacyGroup1Prefixes, byte) ||
-         std::ranges::contains(LegacyGroup2Prefixes, byte) ||
-         byte == LegacyGroup3Prefix || byte == LegacyGroup4Prefix ||
-         std::ranges::contains(RexPrefix, byte);
+constexpr bool IsPrefix(const std::byte byte) noexcept
+{
+  return std::ranges::contains(LegacyGroup1Prefixes, byte) || std::ranges::contains(LegacyGroup2Prefixes, byte)
+         || byte == LegacyGroup3Prefix || byte == LegacyGroup4Prefix || std::ranges::contains(RexPrefix, byte);
 }
 
 // test data
@@ -55,9 +51,8 @@ constexpr std::array<std::byte, 15> TestBytes{
     std::byte{0x64},  // Group 2
     std::byte{0x8B},  // stop
     std::byte{0x0F},  // shouldn't be reached by prefix scanner
-    std::byte{0x66}, std::byte{0x67}, std::byte{0x4C}, std::byte{0x90},
-    std::byte{0x00}, std::byte{0x00}, std::byte{0x00}, std::byte{0x00},
-    std::byte{0x00}, std::byte{0x00}, std::byte{0x00},
+    std::byte{0x66}, std::byte{0x67}, std::byte{0x4C}, std::byte{0x90}, std::byte{0x00}, std::byte{0x00},
+    std::byte{0x00}, std::byte{0x00}, std::byte{0x00}, std::byte{0x00}, std::byte{0x00},
 };
 
 // 1-byte opcode: NOP (0x90)
