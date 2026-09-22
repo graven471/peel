@@ -42,12 +42,23 @@ enum class Mnemonic : uint16_t
   MOVSXD,
   MOVBE,
 
+  ESCAPE_2BYTE,
+
+  // load-effective-address
+  LEA,
+
   RET,
   RETF,
 
   ADD,
   SUB,
   IMUL,
+
+  CBW,
+  CWD,
+
+
+  INS,
 
   ADC,
 
@@ -60,9 +71,11 @@ enum class Mnemonic : uint16_t
 
   CMP,
   PUSH,
+  PUSHF,
   PUSHAD,
 
   POP,
+  POPF,
   POPAD,
 
   TEST,
@@ -75,6 +88,7 @@ enum class Mnemonic : uint16_t
 
   IN,
   OUT,
+  OUTS,
 
   JO,
   JNO,
@@ -146,6 +160,9 @@ enum class Mnemonic : uint16_t
   SEG_FS,
   SEG_GS,
 
+  SAHF,
+  LAHF,
+
   OPERAND_SIZE_PREFIX,
   ADDRESS_SIZE_PREFIX,
   LOCK,
@@ -159,9 +176,12 @@ enum class Mnemonic : uint16_t
   SBB,
 
   DAA,
+  DAS,
   AAA,
+  AAS,
 
   GROUP1,
+  GROUP1A,
   GROUP2,
   GROUP3,
   GROUP4,
@@ -179,6 +199,10 @@ enum class OperandCode : uint16_t
   Gv,
   Ma,
   AL,
+
+  Fv,
+
+  Ew,
 
   Ib,
   Iw,
@@ -232,17 +256,27 @@ enum class OperandCode : uint16_t
   M,
   Ap,
 
+
+  // segment registers
   SS,
+  DS,
+  CS,
+  FS,
+  GS,
 
   // jump target dst in Jmp Mnemonic
   Jb,
 
   Ob,
   Ov,
+  Oz,
   Yb,
+  Yz,
   Xb,
   Yv,
+  Yz,
   Xv,
+  Xz,
 
   AL,
   CL,
@@ -278,8 +312,14 @@ static constexpr Mnemonic GROUP1A[8] = {
 };
 
 static constexpr Mnemonic GROUP2[8] = {
-    Mnemonic::ROL, Mnemonic::ROR, Mnemonic::RCL, Mnemonic::RCR,
-    Mnemonic::SHL, Mnemonic::SHL, Mnemonic::SHR, Mnemonic::SAR,
+    Mnemonic::ROL,  // 000
+    Mnemonic::ROR,  // 001
+    Mnemonic::RCL,  // 010
+    Mnemonic::RCR,  // 011
+    Mnemonic::SHL,  // 100
+    Mnemonic::SHL,  // 101
+    Mnemonic::SHR,  // 110
+    Mnemonic::SAR,  // 111
 };
 
 static constexpr Mnemonic GROUP3[8] = {
@@ -293,12 +333,46 @@ static constexpr Mnemonic GROUP3[8] = {
     Mnemonic::IDIV,     // 111
 };
 
+static constexpr Mnemonic GROUP4[8] = {
+    Mnemonic::INC,      // 000
+    Mnemonic::DEC,      // 001
+    Mnemonic::INVALID,  // 010
+    Mnemonic::INVALID,  // 011
+    Mnemonic::INVALID,  // 100
+    Mnemonic::INVALID,  // 101
+    Mnemonic::INVALID,  // 110
+    Mnemonic::INVALID,  // 111
+};
+
+static constexpr Mnemonic GROUP5[8] = {
+    Mnemonic::INC,      // 000
+    Mnemonic::DEC,      // 001
+    Mnemonic::CALL,     // 010
+    Mnemonic::CALL,     // 011 far call
+    Mnemonic::JMP,      // 100
+    Mnemonic::JMP,      // 101 far jmp
+    Mnemonic::PUSH,     // 110
+    Mnemonic::INVALID,  // 111
+};
+
+static constexpr Mnemonic GROUP11[8] = {
+    Mnemonic::MOV,      // 000
+    Mnemonic::INVALID,  // 001
+    Mnemonic::INVALID,  // 010
+    Mnemonic::INVALID,  // 011
+    Mnemonic::INVALID,  // 100
+    Mnemonic::INVALID,  // 101
+    Mnemonic::INVALID,  // 110
+    Mnemonic::INVALID,  // 111
+};
+
 // Mnemonic dst, src
 struct InstructionDesc
 {
   Mnemonic    mnemonic;
   OperandCode Destination;
   OperandCode Source;
+  OperandCode Extra = OperandCode::None;
 };
 
 static constexpr InstructionDesc OPCODE_TABLE[256] = {
@@ -313,6 +387,17 @@ static constexpr InstructionDesc OPCODE_TABLE[256] = {
     // 0x7
     {.mnemonic = Mnemonic::POP, .Destination = OperandCode::Es, .Source = OperandCode::None},
 
+    // 0x08
+    {.mnemonic = Mnemonic::OR, .Destination = OperandCode::Eb, .Source = OperandCode::Gb},
+    {.mnemonic = Mnemonic::OR, .Destination = OperandCode::Ev, .Source = OperandCode::Gv},
+    {.mnemonic = Mnemonic::OR, .Destination = OperandCode::Gb, .Source = OperandCode::Eb},
+    {.mnemonic = Mnemonic::OR, .Destination = OperandCode::Gv, .Source = OperandCode::Ev},
+    {.mnemonic = Mnemonic::OR, .Destination = OperandCode::AL, .Source = OperandCode::Ib},
+    {.mnemonic = Mnemonic::OR, .Destination = OperandCode::rAX, .Source = OperandCode::Iz},
+    {.mnemonic = Mnemonic::PUSH, .Destination = OperandCode::CS, .Source = OperandCode::None},
+    // 0x0F
+    {.mnemonic = Mnemonic::ESCAPE_2BYTE, .Destination = OperandCode::None, .Source = OperandCode::None},
+
     // 0x10
     {.mnemonic = Mnemonic::ADC, .Destination = OperandCode::Eb, .Source = OperandCode::Gb},
     {.mnemonic = Mnemonic::ADC, .Destination = OperandCode::Ev, .Source = OperandCode::Gv},
@@ -324,6 +409,19 @@ static constexpr InstructionDesc OPCODE_TABLE[256] = {
     // 0x17
     {.mnemonic = Mnemonic::POP, .Destination = OperandCode::SS, .Source = OperandCode::None},
 
+    // 0x18
+    {.mnemonic = Mnemonic::SBB, .Destination = OperandCode::Eb, .Source = OperandCode::Gb},
+    {.mnemonic = Mnemonic::SBB, .Destination = OperandCode::Ev, .Source = OperandCode::Gv},
+    {.mnemonic = Mnemonic::SBB, .Destination = OperandCode::Gb, .Source = OperandCode::Eb},
+    {.mnemonic = Mnemonic::SBB, .Destination = OperandCode::Gv, .Source = OperandCode::Ev},
+    {.mnemonic = Mnemonic::SBB, .Destination = OperandCode::AL, .Source = OperandCode::Ib},
+    {.mnemonic = Mnemonic::SBB, .Destination = OperandCode::rAX, .Source = OperandCode::Iz},
+    // only valid in amd64 mode
+    {.mnemonic = Mnemonic::PUSH, .Destination = OperandCode::DS, .Source = OperandCode::None},
+    // 0xF
+    {.mnemonic = Mnemonic::POP, .Destination = OperandCode::DS, .Source = OperandCode::None},
+
+    // 0x20
     {.mnemonic = Mnemonic::AND, .Destination = OperandCode::Eb, .Source = OperandCode::Gb},
     {.mnemonic = Mnemonic::AND, .Destination = OperandCode::Ev, .Source = OperandCode::Gv},
     {.mnemonic = Mnemonic::AND, .Destination = OperandCode::Gb, .Source = OperandCode::Eb},
@@ -334,6 +432,19 @@ static constexpr InstructionDesc OPCODE_TABLE[256] = {
     // 0x27
     {.mnemonic = Mnemonic::DAA, .Destination = OperandCode::None, .Source = OperandCode::None},
 
+    // 0x28
+    {.mnemonic = Mnemonic::SUB, .Destination = OperandCode::Eb, .Source = OperandCode::Gb},
+    {.mnemonic = Mnemonic::SUB, .Destination = OperandCode::Ev, .Source = OperandCode::Gv},
+    {.mnemonic = Mnemonic::SUB, .Destination = OperandCode::Gb, .Source = OperandCode::Eb},
+    {.mnemonic = Mnemonic::SUB, .Destination = OperandCode::Gv, .Source = OperandCode::Ev},
+    {.mnemonic = Mnemonic::SUB, .Destination = OperandCode::AL, .Source = OperandCode::Ib},
+    {.mnemonic = Mnemonic::SUB, .Destination = OperandCode::rAX, .Source = OperandCode::Iz},
+    {.mnemonic = Mnemonic::SEG_CS, .Destination = OperandCode::None, .Source = OperandCode::None},
+    // only valid in amd64
+    // 0x2F
+    {.mnemonic = Mnemonic::DAS, .Destination = OperandCode::None, .Source = OperandCode::None},
+
+    // 0x30
     {.mnemonic = Mnemonic::XOR, .Destination = OperandCode::Eb, .Source = OperandCode::Gb},
     {.mnemonic = Mnemonic::XOR, .Destination = OperandCode::Ev, .Source = OperandCode::Gv},
     {.mnemonic = Mnemonic::XOR, .Destination = OperandCode::Gb, .Source = OperandCode::Eb},
@@ -342,8 +453,20 @@ static constexpr InstructionDesc OPCODE_TABLE[256] = {
     {.mnemonic = Mnemonic::XOR, .Destination = OperandCode::rAX, .Source = OperandCode::Iz},
     {.mnemonic = Mnemonic::SEG_SS, .Destination = OperandCode::None, .Source = OperandCode::None},
     // 0x37
-    {.mnemonic = Mnemonic::DAA, .Destination = OperandCode::None, .Source = OperandCode::None},
+    {.mnemonic = Mnemonic::AAA, .Destination = OperandCode::None, .Source = OperandCode::None},
 
+    // 0x38
+    {.mnemonic = Mnemonic::CMP, .Destination = OperandCode::Eb, .Source = OperandCode::Gb},
+    {.mnemonic = Mnemonic::CMP, .Destination = OperandCode::Ev, .Source = OperandCode::Gv},
+    {.mnemonic = Mnemonic::CMP, .Destination = OperandCode::Gb, .Source = OperandCode::Eb},
+    {.mnemonic = Mnemonic::CMP, .Destination = OperandCode::Gv, .Source = OperandCode::Ev},
+    {.mnemonic = Mnemonic::CMP, .Destination = OperandCode::AL, .Source = OperandCode::Ib},
+    {.mnemonic = Mnemonic::CMP, .Destination = OperandCode::rAX, .Source = OperandCode::Iz},
+    {.mnemonic = Mnemonic::SEG_CS, .Destination = OperandCode::None, .Source = OperandCode::None},
+    // 0x3F
+    {.mnemonic = Mnemonic::AAS, .Destination = OperandCode::None, .Source = OperandCode::None},
+
+    // 0x40
     // INC^i64 general register / REX^o64 prefixes only valid in amd64 mode
     {.mnemonic = Mnemonic::INC, .Destination = OperandCode::eAX, .Source = OperandCode::REX},
     // REX.B
@@ -362,7 +485,27 @@ static constexpr InstructionDesc OPCODE_TABLE[256] = {
     // 0x47
     {.mnemonic = Mnemonic::INC, .Destination = OperandCode::eDI, .Source = OperandCode::REX},
 
+    // 0x48
+    {.mnemonic = Mnemonic::DEC, .Destination = OperandCode::eAX, .Source = OperandCode::REX},
+    // REX.WB
+    {.mnemonic = Mnemonic::DEC, .Destination = OperandCode::eCX, .Source = OperandCode::REX},
+    // REX.WX
+    {.mnemonic = Mnemonic::DEC, .Destination = OperandCode::eDX, .Source = OperandCode::REX},
+    // REX.WXB
+    {.mnemonic = Mnemonic::DEC, .Destination = OperandCode::eBX, .Source = OperandCode::REX},
+    // REX.WR
+    {.mnemonic = Mnemonic::DEC, .Destination = OperandCode::eSP, .Source = OperandCode::REX},
+    // REX.WRB
+    {.mnemonic = Mnemonic::DEC, .Destination = OperandCode::eBP, .Source = OperandCode::REX},
+    // REX.WRX
+    {.mnemonic = Mnemonic::DEC, .Destination = OperandCode::eSI, .Source = OperandCode::REX},
+    // REX.WRXB
+    // 0x4F
+    {.mnemonic = Mnemonic::DEC, .Destination = OperandCode::eDI, .Source = OperandCode::REX},
+
     // PUSH^d64 general register
+    // 0x50
+    {.mnemonic = Mnemonic::PUSH, .Destination = OperandCode::rAX, .Source = OperandCode::R8},
     {.mnemonic = Mnemonic::PUSH, .Destination = OperandCode::rCX, .Source = OperandCode::R9},
     {.mnemonic = Mnemonic::PUSH, .Destination = OperandCode::rDX, .Source = OperandCode::R10},
     {.mnemonic = Mnemonic::PUSH, .Destination = OperandCode::rBX, .Source = OperandCode::R11},
@@ -372,6 +515,19 @@ static constexpr InstructionDesc OPCODE_TABLE[256] = {
     // 0x57
     {.mnemonic = Mnemonic::PUSH, .Destination = OperandCode::rDI, .Source = OperandCode::R15},
 
+    // PUSH^d64 general register
+    // 0x58
+    {.mnemonic = Mnemonic::POP, .Destination = OperandCode::rAX, .Source = OperandCode::R8},
+    {.mnemonic = Mnemonic::POP, .Destination = OperandCode::rCX, .Source = OperandCode::R9},
+    {.mnemonic = Mnemonic::POP, .Destination = OperandCode::rDX, .Source = OperandCode::R10},
+    {.mnemonic = Mnemonic::POP, .Destination = OperandCode::rBX, .Source = OperandCode::R11},
+    {.mnemonic = Mnemonic::POP, .Destination = OperandCode::rSP, .Source = OperandCode::R12},
+    {.mnemonic = Mnemonic::POP, .Destination = OperandCode::rBP, .Source = OperandCode::R13},
+    {.mnemonic = Mnemonic::POP, .Destination = OperandCode::rSI, .Source = OperandCode::R14},
+    // 0x5F
+    {.mnemonic = Mnemonic::POP, .Destination = OperandCode::rDI, .Source = OperandCode::R15},
+
+    // 0x60
     {.mnemonic = Mnemonic::PUSHAD, .Destination = OperandCode::None, .Source = OperandCode::None},
     {.mnemonic = Mnemonic::POPAD, .Destination = OperandCode::None, .Source = OperandCode::None},
     {.mnemonic = Mnemonic::BOUND, .Destination = OperandCode::Gv, .Source = OperandCode::Ma},
@@ -385,7 +541,19 @@ static constexpr InstructionDesc OPCODE_TABLE[256] = {
     // 0x67
     {.mnemonic = Mnemonic::ADDRESS_SIZE_PREFIX, .Destination = OperandCode::None, .Source = OperandCode::None},
 
+    // 0x68
+    {.mnemonic = Mnemonic::PUSH, .Destination = OperandCode::Iz, .Source = OperandCode::None},
+    {.mnemonic = Mnemonic::IMUL, .Destination = OperandCode::Gv, .Source = OperandCode::Ev, .Extra = OperandCode::Iz},
+    {.mnemonic = Mnemonic::PUSH, .Destination = OperandCode::Ib, .Source = OperandCode::None},
+    {.mnemonic = Mnemonic::IMUL, .Destination = OperandCode::Gv, .Source = OperandCode::Ev, .Extra = OperandCode::Ib},
+    {.mnemonic = Mnemonic::INS, .Destination = OperandCode::Yb, .Source = OperandCode::DX},
+    {.mnemonic = Mnemonic::INS, .Destination = OperandCode::Yz, .Source = OperandCode::DX},
+    {.mnemonic = Mnemonic::OUTS, .Destination = OperandCode::DX, .Source = OperandCode::Xb},
+    // 0x6F
+    {.mnemonic = Mnemonic::OUTS, .Destination = OperandCode::DX, .Source = OperandCode::Xz},
+
     // Jcc^f64, jb - short-displacement jump on condition
+    // 0x70
     {.mnemonic = Mnemonic::JO, .Destination = OperandCode::Jb, .Source = OperandCode::None},
     {.mnemonic = Mnemonic::JNO, .Destination = OperandCode::Jb, .Source = OperandCode::None},
     {.mnemonic = Mnemonic::JB, .Destination = OperandCode::Jb, .Source = OperandCode::None},
@@ -396,7 +564,19 @@ static constexpr InstructionDesc OPCODE_TABLE[256] = {
     // 0x77
     {.mnemonic = Mnemonic::JA, .Destination = OperandCode::Jb, .Source = OperandCode::None},
 
+    // 0x78
+    {.mnemonic = Mnemonic::JS, .Destination = OperandCode::Jb, .Source = OperandCode::None},
+    {.mnemonic = Mnemonic::JNS, .Destination = OperandCode::Jb, .Source = OperandCode::None},
+    {.mnemonic = Mnemonic::JP, .Destination = OperandCode::Jb, .Source = OperandCode::None},
+    {.mnemonic = Mnemonic::JNP, .Destination = OperandCode::Jb, .Source = OperandCode::None},
+    {.mnemonic = Mnemonic::JL, .Destination = OperandCode::Jb, .Source = OperandCode::None},
+    {.mnemonic = Mnemonic::JGE, .Destination = OperandCode::Jb, .Source = OperandCode::None},
+    {.mnemonic = Mnemonic::JLE, .Destination = OperandCode::Jb, .Source = OperandCode::None},
+    // 0x7F
+    {.mnemonic = Mnemonic::JG, .Destination = OperandCode::Jb, .Source = OperandCode::None},
+
     // for GROUP1 Bits 5, 4, and 3 of ModR/M byte used as an opcode extension
+    // 0x80
     {.mnemonic = Mnemonic::GROUP1, .Destination = OperandCode::Eb, .Source = OperandCode::Ib},
     {.mnemonic = Mnemonic::GROUP1, .Destination = OperandCode::Ev, .Source = OperandCode::Iz},
     // invalid in amd64
@@ -409,8 +589,19 @@ static constexpr InstructionDesc OPCODE_TABLE[256] = {
     // 0x87
     {.mnemonic = Mnemonic::XCHG, .Destination = OperandCode::Ev, .Source = OperandCode::Gv},
 
-    // XCHG word, double-word or quad-word register with rAX
+    // 0x88
+    {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::Eb, .Source = OperandCode::Gb},
+    {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::Ev, .Source = OperandCode::Gv},
+    {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::Gb, .Source = OperandCode::Eb},
+    {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::Gv, .Source = OperandCode::Ev},
+    {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::Ev, .Source = OperandCode::Sw},
+    {.mnemonic = Mnemonic::LEA, .Destination = OperandCode::Gv, .Source = OperandCode::M},
+    {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::Sw, .Source = OperandCode::Ew},
+    // 0x8F
+    {.mnemonic = Mnemonic::GROUP1A, .Destination = OperandCode::Ev, .Source = OperandCode::None},
 
+    // XCHG word, double-word or quad-word register with rAX
+    // 0x90
     // this can be either NOP or PAUSE(F3) or XCHG let prefix scanner resolve it
     {.mnemonic = Mnemonic::NOP, .Destination = OperandCode::R8, .Source = OperandCode::rAX},
     {.mnemonic = Mnemonic::XCHG, .Destination = OperandCode::rCX, .Source = OperandCode::R9},
@@ -422,6 +613,18 @@ static constexpr InstructionDesc OPCODE_TABLE[256] = {
     // 0x97
     {.mnemonic = Mnemonic::XCHG, .Destination = OperandCode::rDI, .Source = OperandCode::R15},
 
+    // 0x98
+    {.mnemonic = Mnemonic::CBW, .Destination = OperandCode::None, .Source = OperandCode::None},
+    {.mnemonic = Mnemonic::CWD, .Destination = OperandCode::None, .Source = OperandCode::None},
+    // far call
+    {.mnemonic = Mnemonic::CALL, .Destination = OperandCode::Ap, .Source = OperandCode::None},
+    {.mnemonic = Mnemonic::WAIT, .Destination = OperandCode::None, .Source = OperandCode::None},
+    {.mnemonic = Mnemonic::PUSHF, .Destination = OperandCode::Fv, .Source = OperandCode::None},
+    {.mnemonic = Mnemonic::SAHF, .Destination = OperandCode::None, .Source = OperandCode::None},
+    // 0x9F
+    {.mnemonic = Mnemonic::LAHF, .Destination = OperandCode::None, .Source = OperandCode::None},
+
+    // 0XA0
     {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::AL, .Source = OperandCode::Ob},
     {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::rAX, .Source = OperandCode::Ov},
     {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::Ob, .Source = OperandCode::AL},
@@ -436,18 +639,43 @@ static constexpr InstructionDesc OPCODE_TABLE[256] = {
     // 0xA7
     {.mnemonic = Mnemonic::CMPS, .Destination = OperandCode::Yv, .Source = OperandCode::Xv},
 
+    // 0xA8 (168)
+    {.mnemonic = Mnemonic::TEST, .Destination = OperandCode::AL, .Source = OperandCode::Ib},
+    {.mnemonic = Mnemonic::TEST, .Destination = OperandCode::rAX, .Source = OperandCode::Iz},
+    {.mnemonic = Mnemonic::STOS, .Destination = OperandCode::Yv, .Source = OperandCode::rAX},
+    {.mnemonic = Mnemonic::LODS, .Destination = OperandCode::AL, .Source = OperandCode::Xb},
+    {.mnemonic = Mnemonic::LODS, .Destination = OperandCode::rAX, .Source = OperandCode::Xv},
+    {.mnemonic = Mnemonic::SCAS, .Destination = OperandCode::AL, .Source = OperandCode::Yb},
+    // 0xAF
+    {.mnemonic = Mnemonic::SCAS, .Destination = OperandCode::rAX, .Source = OperandCode::Yv},
+
+
     // MOV immediate byte into byte register
-    {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::AL, .Source = OperandCode::R8B},
-    {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::CL, .Source = OperandCode::R9B},
-    {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::DL, .Source = OperandCode::R10B},
-    {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::BL, .Source = OperandCode::R11B},
-    {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::AH, .Source = OperandCode::R12B},
-    {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::CH, .Source = OperandCode::R13B},
-    {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::DH, .Source = OperandCode::R14B},
+    // 0xB0
+    {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::R8B, .Source = OperandCode::Ib},
+    {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::R9B, .Source = OperandCode::Ib},
+    {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::R10B, .Source = OperandCode::Ib},
+    {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::R11B, .Source = OperandCode::Ib},
+    {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::R12B, .Source = OperandCode::Ib},
+    {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::R13B, .Source = OperandCode::Ib},
+    {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::R14B, .Source = OperandCode::Ib},
     // 0xB7
-    {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::BH, .Source = OperandCode::R15B},
+    {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::R15B, .Source = OperandCode::Ib},
+
+    // 0xB8 (MOV immediate word or double into word, double, or quad register)
+    // swap with r8-r15 if REX.B is set
+    {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::rAX, .Source = OperandCode::Iv},
+    {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::rCX, .Source = OperandCode::Iv},
+    {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::rDX, .Source = OperandCode::Iv},
+    {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::rBX, .Source = OperandCode::Iv},
+    {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::rSP, .Source = OperandCode::Iv},
+    {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::rBP, .Source = OperandCode::Iv},
+    {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::rSI, .Source = OperandCode::Iv},
+    // 0xBF
+    {.mnemonic = Mnemonic::MOV, .Destination = OperandCode::rDI, .Source = OperandCode::Iv},
 
     // Shift Group2^1A, 1A = Bits 5, 4, and 3 of MODR/M byte used as an opcode extension
+    // 0xC0
     {.mnemonic = Mnemonic::GROUP2, .Destination = OperandCode::Eb, .Source = OperandCode::Ib},
     {.mnemonic = Mnemonic::GROUP2, .Destination = OperandCode::Ev, .Source = OperandCode::Ib},
 
@@ -455,130 +683,85 @@ static constexpr InstructionDesc OPCODE_TABLE[256] = {
     {.mnemonic = Mnemonic::RET, .Destination = OperandCode::Iw, .Source = OperandCode::None},
     {.mnemonic = Mnemonic::RET, .Destination = OperandCode::None, .Source = OperandCode::None},
 
-    // 0xC4
     {.mnemonic = Mnemonic::VEX2, .Destination = OperandCode::None, .Source = OperandCode::None},
-    // 0xC5
     {.mnemonic = Mnemonic::VEX1, .Destination = OperandCode::None, .Source = OperandCode::None},
-    // 0xC6
     {.mnemonic = Mnemonic::GROUP11, .Destination = OperandCode::Eb, .Source = OperandCode::Ib},
     // 0xC7
     {.mnemonic = Mnemonic::GROUP11, .Destination = OperandCode::Ev, .Source = OperandCode::Iz},
+
     // 0xC8
     {.mnemonic = Mnemonic::ENTER, .Destination = OperandCode::Iw, .Source = OperandCode::Ib},
-    // 0xC9
     {.mnemonic = Mnemonic::LEAVE, .Destination = OperandCode::None, .Source = OperandCode::None},
-    // 0xCA
     {.mnemonic = Mnemonic::RETF, .Destination = OperandCode::Iw, .Source = OperandCode::None},
-    // 0xCB
     {.mnemonic = Mnemonic::RETF, .Destination = OperandCode::None, .Source = OperandCode::None},
-    // 0xCC
     {.mnemonic = Mnemonic::INT3, .Destination = OperandCode::None, .Source = OperandCode::None},
-    // 0xCD
     {.mnemonic = Mnemonic::INT, .Destination = OperandCode::Ib, .Source = OperandCode::None},
-    // 0xCE
     {.mnemonic = Mnemonic::INVALID, .Destination = OperandCode::None, .Source = OperandCode::None},
     // 0xCF
     {.mnemonic = Mnemonic::IRET, .Destination = OperandCode::None, .Source = OperandCode::None},
 
     // 0xD0
     {.mnemonic = Mnemonic::GROUP2, .Destination = OperandCode::Eb, .Source = OperandCode::One},
-    // 0xD1
     {.mnemonic = Mnemonic::GROUP2, .Destination = OperandCode::Ev, .Source = OperandCode::One},
-    // 0xD2
     {.mnemonic = Mnemonic::GROUP2, .Destination = OperandCode::Eb, .Source = OperandCode::CL},
-    // 0xD3
     {.mnemonic = Mnemonic::GROUP2, .Destination = OperandCode::Ev, .Source = OperandCode::CL},
-    // 0xD4
     {.mnemonic = Mnemonic::INVALID, .Destination = OperandCode::None, .Source = OperandCode::None},
-    // 0xD5
     {.mnemonic = Mnemonic::INVALID, .Destination = OperandCode::None, .Source = OperandCode::None},
-    // 0xD6
     {.mnemonic = Mnemonic::INVALID, .Destination = OperandCode::None, .Source = OperandCode::None},
     // 0xD7
     {.mnemonic = Mnemonic::XLAT, .Destination = OperandCode::None, .Source = OperandCode::None},
-    // 0xD8
+
     {.mnemonic = Mnemonic::X87, .Destination = OperandCode::None, .Source = OperandCode::None},
-    // 0xD9
     {.mnemonic = Mnemonic::X87, .Destination = OperandCode::None, .Source = OperandCode::None},
-    // 0xDA
     {.mnemonic = Mnemonic::X87, .Destination = OperandCode::None, .Source = OperandCode::None},
-    // 0xDB
     {.mnemonic = Mnemonic::X87, .Destination = OperandCode::None, .Source = OperandCode::None},
-    // 0xDC
     {.mnemonic = Mnemonic::X87, .Destination = OperandCode::None, .Source = OperandCode::None},
-    // 0xDD
     {.mnemonic = Mnemonic::X87, .Destination = OperandCode::None, .Source = OperandCode::None},
-    // 0xDE
     {.mnemonic = Mnemonic::X87, .Destination = OperandCode::None, .Source = OperandCode::None},
     // 0xDF
     {.mnemonic = Mnemonic::X87, .Destination = OperandCode::None, .Source = OperandCode::None},
 
     // 0xE0
     {.mnemonic = Mnemonic::LOOPNE, .Destination = OperandCode::Jb, .Source = OperandCode::None},
-    // 0xE1
     {.mnemonic = Mnemonic::LOOPE, .Destination = OperandCode::Jb, .Source = OperandCode::None},
-    // 0xE2
     {.mnemonic = Mnemonic::LOOP, .Destination = OperandCode::Jb, .Source = OperandCode::None},
-    // 0xE3
     {.mnemonic = Mnemonic::JRCXZ, .Destination = OperandCode::Jb, .Source = OperandCode::None},
-    // 0xE4
     {.mnemonic = Mnemonic::IN, .Destination = OperandCode::AL, .Source = OperandCode::Ib},
-    // 0xE5
     {.mnemonic = Mnemonic::IN, .Destination = OperandCode::eAX, .Source = OperandCode::Ib},
-    // 0xE6
     {.mnemonic = Mnemonic::OUT, .Destination = OperandCode::Ib, .Source = OperandCode::AL},
     // 0xE7
     {.mnemonic = Mnemonic::OUT, .Destination = OperandCode::Ib, .Source = OperandCode::eAX},
+
     // 0xE8
     {.mnemonic = Mnemonic::CALL, .Destination = OperandCode::Jz, .Source = OperandCode::None},
-    // 0xE9
     {.mnemonic = Mnemonic::JMP, .Destination = OperandCode::Jz, .Source = OperandCode::None},
-    // 0xEA
     {.mnemonic = Mnemonic::INVALID, .Destination = OperandCode::None, .Source = OperandCode::None},
-    // 0xEB
     {.mnemonic = Mnemonic::JMP, .Destination = OperandCode::Jb, .Source = OperandCode::None},
-    // 0xEC
     {.mnemonic = Mnemonic::IN, .Destination = OperandCode::AL, .Source = OperandCode::DX},
-    // 0xED
     {.mnemonic = Mnemonic::IN, .Destination = OperandCode::eAX, .Source = OperandCode::DX},
-    // 0xEE
     {.mnemonic = Mnemonic::OUT, .Destination = OperandCode::DX, .Source = OperandCode::AL},
     // 0xEF
     {.mnemonic = Mnemonic::OUT, .Destination = OperandCode::DX, .Source = OperandCode::eAX},
 
     // 0xF0
     {.mnemonic = Mnemonic::LOCK, .Destination = OperandCode::None, .Source = OperandCode::None},
-    // 0xF1
     {.mnemonic = Mnemonic::INT1, .Destination = OperandCode::None, .Source = OperandCode::None},
-    // 0xF2
     {.mnemonic = Mnemonic::REPNE, .Destination = OperandCode::None, .Source = OperandCode::None},
-    // 0xF3
     {.mnemonic = Mnemonic::REP, .Destination = OperandCode::None, .Source = OperandCode::None},
-    // 0xF4
     {.mnemonic = Mnemonic::HLT, .Destination = OperandCode::None, .Source = OperandCode::None},
-    // 0xF5
     {.mnemonic = Mnemonic::CMC, .Destination = OperandCode::None, .Source = OperandCode::None},
-    // 0xF6
     {.mnemonic = Mnemonic::GROUP3, .Destination = OperandCode::Eb, .Source = OperandCode::None},
     // 0xF7
     {.mnemonic = Mnemonic::GROUP3, .Destination = OperandCode::Ev, .Source = OperandCode::None},
+
     // 0xF8
     {.mnemonic = Mnemonic::CLC, .Destination = OperandCode::None, .Source = OperandCode::None},
-    // 0xF9
     {.mnemonic = Mnemonic::STC, .Destination = OperandCode::None, .Source = OperandCode::None},
-    // 0xFA
     {.mnemonic = Mnemonic::CLI, .Destination = OperandCode::None, .Source = OperandCode::None},
-    // 0xFB
     {.mnemonic = Mnemonic::STI, .Destination = OperandCode::None, .Source = OperandCode::None},
-    // 0xFC
     {.mnemonic = Mnemonic::CLD, .Destination = OperandCode::None, .Source = OperandCode::None},
-    // 0xFD
     {.mnemonic = Mnemonic::STD, .Destination = OperandCode::None, .Source = OperandCode::None},
-    // 0xFE
     {.mnemonic = Mnemonic::GROUP4, .Destination = OperandCode::Eb, .Source = OperandCode::None},
     // 0xFF
     {.mnemonic = Mnemonic::GROUP5, .Destination = OperandCode::Ev, .Source = OperandCode::None},
-
-    // remaining 126 entries
-
 };
