@@ -29,19 +29,27 @@ void Disassembler::DoIt()
 
   std::span<const std::byte> InstructionEncoding = TextSection.Data.subspan(8, 32);
 
-  std::span<const std::byte> Rest = PrefixScanner(InstructionEncoding);
-  // let it return opcode either 1, 2, or 3 bytes
-  OpCodeScanner(Rest);
+  // fetches the prefix if available and slides the InstructionEncoding to after prefix
+  // e.g. if prefix is 2-bytes then InstructionEncoding will be subspan(2, ...)
+  PrefixScanner(InstructionEncoding);
+  // and slides the InstructionEncoding to either 1, 2, or 3 byte
+  // todo: return opcode so i can send to metadata
+  OpCodeScanner(InstructionEncoding);
 
   InstructionDesc OpcodeMetadata = OPCODE_TABLE[std::uint8_t{0X08}];
 
   if(RequiresModRM(OpcodeMetadata.Source) || RequiresModRM(OpcodeMetadata.Destination) || RequiresModRM(OpcodeMetadata.Extra))
   {
     // call modrm_scanner
+
+    // disp
+    // SIB etc
   }
+
+  // immediate
 }
 
-std::span<const std::byte> Disassembler::PrefixScanner(std::span<const std::byte> Bytes)
+void Disassembler::PrefixScanner(std::span<const std::byte> Bytes)
 {
   // for I in instruction encoding:
   //   is I in legacy group 1-4 prefix ?
@@ -76,6 +84,9 @@ std::span<const std::byte> Disassembler::PrefixScanner(std::span<const std::byte
   // PrefixCount = N - 0 => N
   auto PrefixCount = PrefixEnd - TestBytesSpan.begin();
 
+  // slide the instruction window should point to opcode now
+  Bytes = Bytes.subspan(PrefixCount);
+
   // let PrefixCount = N, where N <= Data.size()
   // then Prefixes is a new view into Data from
   // assuming PrefixCount = PrefixEnd - Data.begin(), where Data.begin() == 0
@@ -88,15 +99,13 @@ std::span<const std::byte> Disassembler::PrefixScanner(std::span<const std::byte
   // from PrefixCount...Data.size()
   // conceptually
   // [N....Data.size()]
-  std::span<const std::byte> Rest = TestBytesSpan.subspan(PrefixCount);
+  //std::span<const std::byte> Rest = TestBytesSpan.subspan(PrefixCount);
 
   // todo: have some kind of structure or data that stores prefixes and group
   for(size_t I = 0; I < Prefixes.size(); I++)
   {
     std::print("Prefix: 0x{:02x} ", std::to_integer<uint8_t>(Prefixes[I]));
   }
-
-  return Rest;
 }
 
 // note some opcode requires ModR/M and some don't so i have return

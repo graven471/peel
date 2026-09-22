@@ -11,8 +11,7 @@ public:
   void DoIt();
 
 private:
-  std::span<const std::byte> PrefixScanner(std::span<const std::byte> Bytes);
-
+  void PrefixScanner(std::span<const std::byte> Bytes);
   void OpCodeScanner(std::span<const std::byte> Bytes);
 
   PEImage* Image = nullptr;
