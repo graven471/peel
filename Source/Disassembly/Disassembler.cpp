@@ -8,6 +8,7 @@
 
 #include "x86-64/Opcodes.hpp"
 #include "x86-64/Prefixes.hpp"
+#include "x86-64/Instructions.hpp"
 
 void Disassembler::DoIt()
 {
