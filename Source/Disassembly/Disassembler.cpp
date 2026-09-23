@@ -39,37 +39,38 @@ void Disassembler::DoIt()
   // todo: abstract this into some metadata lookup function
   InstructionDesc OpcodeMetadata = OPCODE_TABLE[std::to_integer<std::uint8_t>(Opcode.Bytes[0])];
 
+  std::println("{} {}, {}", ToString(OpcodeMetadata.mnemonic), ToString(OpcodeMetadata.Destination),
+               ToString(OpcodeMetadata.Source));
+
   if(OpcodeMetadata.ModRM)
   {
     const std::byte ModRMByte = InstructionEncoding[0];
-
-    // call modrm_scanner
     std::println("ModR/M is 0x{:02x}", std::to_integer<uint8_t>(ModRMByte));
 
     ModRM ModRM = ModRMScanner(ModRMByte);
+    // slide InstructionEncoding to point after ModR/M byte
+    InstructionEncoding = InstructionEncoding.subspan(1);
 
     // r/m refers to register
     if(ModRM.Mod == 3)
     {
-      // Ev -> ModR/M.r/m
-      // Gv -> ModR/M.reg
       if(OpcodeMetadata.Destination == OperandCode::Ev)
       {
-        std::string_view SourceRegister      = ToString(ResolveRegister(ModRM.Rm, OperandSize::Bits64));
-        std::string_view DestinationRegister = ToString(ResolveRegister(ModRM.Reg, OperandSize::Bits64));
+        std::string_view SourceRegister      = ToString(ResolveRegister(ModRM.Rm, OperandSize::Bits32));
+        std::string_view DestinationRegister = ToString(ResolveRegister(ModRM.Reg, OperandSize::Bits32));
+
+        std::println("{} {}, {}", ToString(OpcodeMetadata.mnemonic), SourceRegister, DestinationRegister);
+      }
+
+      if(OpcodeMetadata.Destination == OperandCode::Gv)
+      {
+        std::string_view SourceRegister      = ToString(ResolveRegister(ModRM.Reg, OperandSize::Bits32));
+        std::string_view DestinationRegister = ToString(ResolveRegister(ModRM.Rm, OperandSize::Bits32));
 
         std::println("{} {}, {}", ToString(OpcodeMetadata.mnemonic), SourceRegister, DestinationRegister);
       }
     }
-
-    // slide InstructionEncoding to point after ModR/M byte
-    InstructionEncoding = InstructionEncoding.subspan(1);
-
-    // disp
-    // SIB etc
   }
-
-  // immediate
 }
 
 // the reason we need to pass reference here because even tho span is just ptr and size
@@ -111,9 +112,6 @@ void Disassembler::PrefixScanner(std::span<const std::byte>& Bytes)
   // PrefixCount = N - 0 => N
   auto PrefixCount = PrefixEnd - Bytes.begin();
 
-  // slide the instruction window should point to opcode now
-  Bytes = Bytes.subspan(PrefixCount);
-
   // let PrefixCount = N, where N <= Data.size()
   // then Prefixes is a new view into Data from
   // assuming PrefixCount = PrefixEnd - Data.begin(), where Data.begin() == 0
@@ -127,6 +125,9 @@ void Disassembler::PrefixScanner(std::span<const std::byte>& Bytes)
   // conceptually
   // [N....Data.size()]
   //std::span<const std::byte> Rest = TestBytesSpan.subspan(PrefixCount);
+
+  // slide the instruction window should point to opcode now
+  Bytes = Bytes.subspan(PrefixCount);
 
   // todo: have some kind of structure or data that stores prefixes and group
   for(size_t I = 0; I < Prefixes.size(); I++)
