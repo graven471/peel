@@ -45,7 +45,9 @@ void Disassembler::DoIt()
     // call modrm_scanner
     std::println("0x{:02x}", std::to_integer<uint8_t>(InstructionEncoding[0]));
 
-    ModRMScanner(InstructionEncoding[0]);
+    const std::byte ModRM = InstructionEncoding[0];
+
+    ModRMScanner(ModRM);
 
     // disp
     // SIB etc
@@ -54,6 +56,10 @@ void Disassembler::DoIt()
   // immediate
 }
 
+// the reason we need to pass reference here because even tho span is just ptr and size
+// is that if we pass by value it will underlying ptr and size and construct a local span
+// and modification will be on that local span instead of modifying Bytes which is in caller stack frame
+// i thought since its a pointer they both will point to same data so i can modify it without reference
 void Disassembler::PrefixScanner(std::span<const std::byte>& Bytes)
 {
   // for I in instruction encoding:
@@ -263,5 +269,5 @@ void Disassembler::ModRMScanner(const std::byte Byte)
   const std::uint8_t Reg = (Value & 0x38) >> 3;
   const std::uint8_t Rm  = Value & 0x07;
 
-  std::println("Mod: {}, Reg: {}, Rm: {}", Mod, Reg, Rm);
+  std::println("Mod: 0x{:02x}, Reg: 0x{:02x}, Rm: 0x{:02x}", Mod, Reg, Rm);
 }
