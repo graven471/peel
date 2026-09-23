@@ -82,4 +82,7 @@ constexpr std::array<std::byte, 5> TestMap3Opcode{
     std::byte{0x00},                   // padding
 };
 
-inline auto TestBytesSpan = std::span{Test1ByteOpcode};
+// ADD Ev, Gv
+constexpr std::array<std::byte, 2> TestModRMOpcode{std::byte{0x01}, std::byte{0xC8}};
+
+inline auto TestBytesSpan = std::span{TestModRMOpcode};

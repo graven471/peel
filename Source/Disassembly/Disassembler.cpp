@@ -28,20 +28,23 @@ void Disassembler::DoIt()
 
   ImageSection& TextSection = *It;
 
-  std::span<const std::byte> InstructionEncoding = TextSection.Data.subspan(8, 32);
+  //std::span<const std::byte> InstructionEncoding = TextSection.Data.subspan(8, 32);
+
+  std::span<const std::byte> InstructionEncoding = TestBytesSpan;
 
   // fetches the prefix if available and slides the InstructionEncoding to after prefix
   // e.g. if prefix is 2-bytes then InstructionEncoding will be subspan(2, ...)
   PrefixScanner(InstructionEncoding);
-  // and slides the InstructionEncoding to either 1, 2, or 3 byte
-  // todo: return opcode so i can send to metadata
-  OpCodeScanner(InstructionEncoding);
+  OpcodeResult Opcode = OpcodeScanner(InstructionEncoding);
 
-  InstructionDesc OpcodeMetadata = OPCODE_TABLE[std::uint8_t{0X08}];
+  // todo: abstract this into some metadata lookup function
+  InstructionDesc OpcodeMetadata = OPCODE_TABLE[std::to_integer<std::uint8_t>(Opcode.Bytes[0])];
 
   if(OpcodeMetadata.ModRM)
   {
     // call modrm_scanner
+
+    std::println("next byte is ModR/M");
 
     // disp
     // SIB etc
@@ -111,7 +114,7 @@ void Disassembler::PrefixScanner(std::span<const std::byte> Bytes)
 
 // note some opcode requires ModR/M and some don't so i have return
 // the info somehow that does opcode needs ModR/M or not
-void Disassembler::OpCodeScanner(std::span<const std::byte> Bytes)
+OpcodeResult Disassembler::OpcodeScanner(std::span<const std::byte> Bytes)
 {
   // we are assuming that the Bytes[0] will be valid x86-64 opcode
   // opcode can be either 1 byte or 2 bytes or 3 bytes
@@ -152,16 +155,17 @@ void Disassembler::OpCodeScanner(std::span<const std::byte> Bytes)
     else stop opcode_length = 2
   */
 
+
+  // return an array or something
   assert(!Bytes.empty());
 
   if(Bytes[0] != OPCODE_ESCAPE)
   {
-    // stop store opcode and return Bytes.subspan(1)
-    std::println("there is no escape opcode");
     const std::byte Opcode = Bytes[0];
-    std::println("opcode: 0x{:02x}", std::to_integer<std::uint8_t>(Opcode));
+
+    // slide instruction
     Bytes = Bytes.subspan(1);
-    return;
+    return OpcodeResult{.Bytes = {Opcode, std::byte{0}, std::byte{0}}, .Length = 1};
   }
 
   if(Bytes[1] == OPCODE_MAP2_SELECT || Bytes[1] == OPCODE_MAP3_SELECT)
@@ -169,11 +173,14 @@ void Disassembler::OpCodeScanner(std::span<const std::byte> Bytes)
     assert(Bytes.size() >= 3 &&
            "opcode contains OPCODE_MAP byte so Bytes must need to be atleast "
            "3-bytes");
-    std::println("found OPCODE_MAP2_SELECT or OPCODE_MAP3_SELECT");
 
-    auto Opcodes = Bytes.first(3);
-    Bytes        = Bytes.subspan(3);
-    return;
+    // get the view to opcodes and slide bytes so it can point to after opcode
+    const std::byte Map    = Bytes[1];
+    const std::byte Opcode = Bytes[2];
+    Bytes                  = Bytes.subspan(3);
+
+    // 0x0F variant(0x38, 0x3A), XX
+    return OpcodeResult{.Bytes = Map == OPCODE_MAP2_SELECT ? BuildOpcodeMap2(Opcode) : BuildOpcodeMap3(Opcode), .Length = 3};
   }
 
   assert(Bytes.size() >= 2 &&
@@ -183,13 +190,9 @@ void Disassembler::OpCodeScanner(std::span<const std::byte> Bytes)
   // now here we know that there is opcode map and bytes[0] is opcode_escape
   // so opcode is 2-bytes store that and return Bytes.subspan(2)
 
-  auto Opcodes = Bytes.first(2);
-  Bytes        = Bytes.subspan(2);
+  std::array<std::byte, 2> Opcodes = BuildTwoBytesOpcode(Bytes[1]);
+  Bytes                            = Bytes.subspan(2);
 
-  std::array<std::byte, 2> Opcode = BuildTwoBytesOpcode(Opcodes[1]);
-
-  for(auto& o : Opcode)
-  {
-    std::println("opcode: 0x{:02x}", std::to_integer<std::uint8_t>(o));
-  }
+  // 0x0F XX
+  return OpcodeResult{.Bytes = {Opcodes[0], Opcodes[1], std::byte{0x0}}, .Length = 2};
 }
