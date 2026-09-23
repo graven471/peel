@@ -17,8 +17,9 @@ public:
   void DoIt();
 
 private:
-  void         PrefixScanner(std::span<const std::byte> Bytes);
-  OpcodeResult OpcodeScanner(std::span<const std::byte> Bytes);
+  void         PrefixScanner(std::span<const std::byte>& Bytes);
+  OpcodeResult OpcodeScanner(std::span<const std::byte>& Bytes);
+  void         ModRMScanner(const std::byte Byte);
 
   PEImage* Image = nullptr;
 };

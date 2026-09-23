@@ -43,8 +43,9 @@ void Disassembler::DoIt()
   if(OpcodeMetadata.ModRM)
   {
     // call modrm_scanner
+    std::println("0x{:02x}", std::to_integer<uint8_t>(InstructionEncoding[0]));
 
-    std::println("next byte is ModR/M");
+    ModRMScanner(InstructionEncoding[0]);
 
     // disp
     // SIB etc
@@ -53,7 +54,7 @@ void Disassembler::DoIt()
   // immediate
 }
 
-void Disassembler::PrefixScanner(std::span<const std::byte> Bytes)
+void Disassembler::PrefixScanner(std::span<const std::byte>& Bytes)
 {
   // for I in instruction encoding:
   //   is I in legacy group 1-4 prefix ?
@@ -81,12 +82,12 @@ void Disassembler::PrefixScanner(std::span<const std::byte> Bytes)
   // so it stops and gives the index in this case 4
 
   // PrefixEnd is an Iterator pointing to 4th element in span
-  auto PrefixEnd = std::ranges::find_if_not(TestBytesSpan, IsPrefix);
+  auto PrefixEnd = std::ranges::find_if_not(Bytes, IsPrefix);
 
   // let PrefixEnd be &Data[N]
   // let begin() = &Data[0]
   // PrefixCount = N - 0 => N
-  auto PrefixCount = PrefixEnd - TestBytesSpan.begin();
+  auto PrefixCount = PrefixEnd - Bytes.begin();
 
   // slide the instruction window should point to opcode now
   Bytes = Bytes.subspan(PrefixCount);
@@ -96,7 +97,7 @@ void Disassembler::PrefixScanner(std::span<const std::byte> Bytes)
   // assuming PrefixCount = PrefixEnd - Data.begin(), where Data.begin() == 0
   // [X.......N] where X represents some byte
   // first = give me first N elements of this span
-  std::span<const std::byte> Prefixes = TestBytesSpan.first(PrefixCount);
+  std::span<const std::byte> Prefixes = Bytes.first(PrefixCount);
 
   // let PrefixCount = N, where N <= Data.size()
   // then then Instruction is a new view into Data
@@ -114,7 +115,7 @@ void Disassembler::PrefixScanner(std::span<const std::byte> Bytes)
 
 // note some opcode requires ModR/M and some don't so i have return
 // the info somehow that does opcode needs ModR/M or not
-OpcodeResult Disassembler::OpcodeScanner(std::span<const std::byte> Bytes)
+OpcodeResult Disassembler::OpcodeScanner(std::span<const std::byte>& Bytes)
 {
   // we are assuming that the Bytes[0] will be valid x86-64 opcode
   // opcode can be either 1 byte or 2 bytes or 3 bytes
@@ -195,4 +196,72 @@ OpcodeResult Disassembler::OpcodeScanner(std::span<const std::byte> Bytes)
 
   // 0x0F XX
   return OpcodeResult{.Bytes = {Opcodes[0], Opcodes[1], std::byte{0x0}}, .Length = 2};
+}
+
+void Disassembler::ModRMScanner(const std::byte Byte)
+{
+  /*
+    example: 11 001 100
+             |   |   |
+            mod  reg  r/m
+
+  mod -> defines how we should treat r/m bits the values are:
+
+  11 -> treat r/m as general purpose register
+  00 -> treat r/m as memory address
+  01 -> then assuming AMD64 mode treat r/m as [base_register + disp8]
+  10 -> then assuming AMD64 mode treat r/m as [base_register + disp32]
+  
+  mod = 00, r/m = 101 is special one in AMD64 it means treat r/m as [RIP + disp32]
+
+  reg -> note some modr/m can have opcode extension instead of /r something like /1 .. /7
+  but assuming /r this maps to general purpose registers and registers width depends on architecture
+  000 -> AX, EAX, RAX
+  001 -> CX, ECX, RCX
+  ...
+  111 -> DI, EDI, RDI
+
+  example: Byte = 1100 1000 (0xC8)
+
+  mod = 11  ->  register access
+  reg = 001 -> RCX,EDX etc depends on architecture
+  r/m = 000 -> and since mod = 11 we should treat this as register so RAX,EAX etc
+
+
+  so how to translate this in code
+
+  i want:
+
+  uint8_t mod = 11
+  uint8_t reg = 001
+  uint8_t rm = 000
+
+  `w = x - n + 1` where x is the highest bit and n is the lowest bit
+
+  mask = ((1 <= w) - 1) << n, where w = ones
+
+  field = (Byte & mask) >= n
+
+  mod: x = 7, n = 6
+  mask = ((1 << 2) - 1) << 6
+       = 0b11 << 6
+       = 1100 0000 (0xC0)
+
+   reg: x=5, n=3
+   mask = ((1 << 3) - 1) << 3
+     = 0b111 << 3
+     = 0011 1000 (0x38)
+
+  r/m: x=2, n=0
+  mask = ((1 << 3) - 1) << 0
+       = 0000 0111 (0x7)
+  */
+
+  const std::uint8_t Value = std::to_integer<std::uint8_t>(Byte);
+
+  const std::uint8_t Mod = (Value & 0xC0) >> 6;
+  const std::uint8_t Reg = (Value & 0x38) >> 3;
+  const std::uint8_t Rm  = Value & 0x07;
+
+  std::println("Mod: {}, Reg: {}, Rm: {}", Mod, Reg, Rm);
 }
