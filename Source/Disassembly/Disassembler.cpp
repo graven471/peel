@@ -42,6 +42,7 @@ void Disassembler::DoIt()
   std::println("{} {}, {}", ToString(OpcodeMetadata.mnemonic), ToString(OpcodeMetadata.Destination),
                ToString(OpcodeMetadata.Source));
 
+  // todo: abstract this
   if(OpcodeMetadata.ModRM)
   {
     const std::byte ModRMByte = InstructionEncoding[0];
@@ -54,20 +55,23 @@ void Disassembler::DoIt()
     // r/m refers to register
     if(ModRM.Mod == 3)
     {
-      if(OpcodeMetadata.Destination == OperandCode::Ev)
+      if(OpcodeMetadata.Destination == OperandCode::Ev && OpcodeMetadata.Source == OperandCode::Gv)
       {
-        std::string_view SourceRegister      = ToString(ResolveRegister(ModRM.Rm, OperandSize::Bits32));
-        std::string_view DestinationRegister = ToString(ResolveRegister(ModRM.Reg, OperandSize::Bits32));
-
-        std::println("{} {}, {}", ToString(OpcodeMetadata.mnemonic), SourceRegister, DestinationRegister);
-      }
-
-      if(OpcodeMetadata.Destination == OperandCode::Gv)
-      {
-        std::string_view SourceRegister      = ToString(ResolveRegister(ModRM.Reg, OperandSize::Bits32));
         std::string_view DestinationRegister = ToString(ResolveRegister(ModRM.Rm, OperandSize::Bits32));
+        std::string_view SourceRegister      = ToString(ResolveRegister(ModRM.Reg, OperandSize::Bits32));
 
-        std::println("{} {}, {}", ToString(OpcodeMetadata.mnemonic), SourceRegister, DestinationRegister);
+        std::println("{} {}, {}", ToString(OpcodeMetadata.mnemonic), DestinationRegister, SourceRegister);
+      }
+      else if(OpcodeMetadata.Destination == OperandCode::Gv && OpcodeMetadata.Source == OperandCode::Ev)
+      {
+        std::string_view DestinationRegister = ToString(ResolveRegister(ModRM.Reg, OperandSize::Bits32));
+        std::string_view SourceRegister      = ToString(ResolveRegister(ModRM.Rm, OperandSize::Bits32));
+        std::println("{} {}, {}", ToString(OpcodeMetadata.mnemonic), DestinationRegister, SourceRegister);
+      }
+      else
+      {
+        // Unsupported operand combination for now.
+        return;
       }
     }
   }
@@ -179,8 +183,6 @@ OpcodeResult Disassembler::OpcodeScanner(std::span<const std::byte>& Bytes)
     else stop opcode_length = 2
   */
 
-
-  // return an array or something
   assert(!Bytes.empty());
 
   if(Bytes[0] != OPCODE_ESCAPE)
