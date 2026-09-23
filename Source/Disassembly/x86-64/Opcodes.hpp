@@ -34,6 +34,17 @@ constexpr std::array<std::byte, 3> BuildOpcodeMap3(const std::byte Opcode) noexc
   return std::array{OPCODE_ESCAPE, OPCODE_MAP3_SELECT, Opcode};
 }
 
+enum class OperandSize : std::uint8_t
+{
+  // real mode
+  Bits8,
+  Bits16,
+  // protected mode
+  Bits32,
+  // amd64 mode
+  Bits64
+};
+
 /*
 THANKS A LOT Intel For making all of these info available freely ^^
 Intel SDM Volume 2 Appendix A and B

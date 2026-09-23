@@ -9,6 +9,7 @@
 #include "x86-64/Opcodes.hpp"
 #include "x86-64/Prefixes.hpp"
 #include "x86-64/Instructions.hpp"
+#include "x86-64/Registers.hpp"
 
 void Disassembler::DoIt()
 {
@@ -45,13 +46,24 @@ void Disassembler::DoIt()
     // call modrm_scanner
     std::println("ModR/M is 0x{:02x}", std::to_integer<uint8_t>(ModRMByte));
 
-    ModRMScanner(ModRMByte);
+    ModRM ModRM = ModRMScanner(ModRMByte);
+
+    // r/m refers to register
+    if(ModRM.Mod == 3)
+    {
+      // Ev -> ModR/M.r/m
+      // Gv -> ModR/M.reg
+      if(OpcodeMetadata.Destination == OperandCode::Ev)
+      {
+        std::string_view SourceRegister      = ToString(ResolveRegister(ModRM.Rm, OperandSize::Bits64));
+        std::string_view DestinationRegister = ToString(ResolveRegister(ModRM.Reg, OperandSize::Bits64));
+
+        std::println("{} {}, {}", ToString(OpcodeMetadata.mnemonic), SourceRegister, DestinationRegister);
+      }
+    }
 
     // slide InstructionEncoding to point after ModR/M byte
     InstructionEncoding = InstructionEncoding.subspan(1);
-
-    std::println("{} {}, {}", ToString(OpcodeMetadata.mnemonic), ToString(OpcodeMetadata.Destination),
-                 ToString(OpcodeMetadata.Source));
 
     // disp
     // SIB etc
@@ -208,7 +220,7 @@ OpcodeResult Disassembler::OpcodeScanner(std::span<const std::byte>& Bytes)
   return OpcodeResult{.Bytes = {Opcodes[0], Opcodes[1], std::byte{0x0}}, .Length = 2};
 }
 
-void Disassembler::ModRMScanner(const std::byte Byte)
+ModRM Disassembler::ModRMScanner(const std::byte Byte)
 {
   /*
     example: 11 001 100
@@ -274,4 +286,6 @@ void Disassembler::ModRMScanner(const std::byte Byte)
   const std::uint8_t Rm  = Value & 0x07;
 
   std::println("Mod: 0x{:02x}, Reg: 0x{:02x}, Rm: 0x{:02x}", Mod, Reg, Rm);
+
+  return ModRM{.Mod = Mod, .Reg = Reg, .Rm = Rm};
 }
