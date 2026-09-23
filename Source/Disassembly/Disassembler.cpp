@@ -12,19 +12,17 @@
 
 void Disassembler::DoIt()
 {
-  constexpr std::array TextName{'.', 't', 'e', 'x', 't', '\0', '\0', '\0'};
+  constexpr std::array TextSectionName{'.', 't', 'e', 'x', 't', '\0', '\0', '\0'};
 
   auto It = std::ranges::find_if(Image->SectionHeaders, [&](const ImageSection& Section) {
-    return std::ranges::equal(Section.Header.Name, TextName);
+    return std::ranges::equal(Section.Header.Name, TextSectionName);
   });
 
-  if(It == Image->SectionHeaders.end())
+  if(It == Image->SectionHeaders.end()) [[unlikely]]
   {
     std::println(stderr, "no .text section is present");
     return;
   }
-
-  std::println("found text section");
 
   ImageSection& TextSection = *It;
 
@@ -42,12 +40,18 @@ void Disassembler::DoIt()
 
   if(OpcodeMetadata.ModRM)
   {
+    const std::byte ModRMByte = InstructionEncoding[0];
+
     // call modrm_scanner
-    std::println("0x{:02x}", std::to_integer<uint8_t>(InstructionEncoding[0]));
+    std::println("ModR/M is 0x{:02x}", std::to_integer<uint8_t>(ModRMByte));
 
-    const std::byte ModRM = InstructionEncoding[0];
+    ModRMScanner(ModRMByte);
 
-    ModRMScanner(ModRM);
+    // slide InstructionEncoding to point after ModR/M byte
+    InstructionEncoding = InstructionEncoding.subspan(1);
+
+    std::println("{} {}, {}", ToString(OpcodeMetadata.mnemonic), ToString(OpcodeMetadata.Destination),
+                 ToString(OpcodeMetadata.Source));
 
     // disp
     // SIB etc

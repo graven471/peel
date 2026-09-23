@@ -39,117 +39,109 @@ THANKS A LOT Intel For making all of these info available freely ^^
 Intel SDM Volume 2 Appendix A and B
 */
 
-enum class OperandCode : uint16_t
+#define OPERAND_CODE_LIST(X)                                                                                           \
+  X(None)                                                                                                              \
+  X(Eb)                                                                                                                \
+  X(Es)                                                                                                                \
+  X(Gb)                                                                                                                \
+  X(Ev)                                                                                                                \
+  X(Gv)                                                                                                                \
+  X(Ma)                                                                                                                \
+  X(AL)                                                                                                                \
+  X(Q)                                                                                                                 \
+  X(W)                                                                                                                 \
+  X(N)                                                                                                                 \
+  X(CL)                                                                                                                \
+  X(Fv)                                                                                                                \
+  X(Ew)                                                                                                                \
+  X(Ib)                                                                                                                \
+  X(Iw)                                                                                                                \
+  X(Iv)                                                                                                                \
+  X(Iz)                                                                                                                \
+  X(eAX)                                                                                                               \
+  X(eBX)                                                                                                               \
+  X(eBP)                                                                                                               \
+  X(eCX)                                                                                                               \
+  X(eDX)                                                                                                               \
+  X(eDI)                                                                                                               \
+  X(eSP)                                                                                                               \
+  X(eSI)                                                                                                               \
+  X(R8)                                                                                                                \
+  X(R8B)                                                                                                               \
+  X(R9)                                                                                                                \
+  X(R9B)                                                                                                               \
+  X(R10)                                                                                                               \
+  X(R10B)                                                                                                              \
+  X(R11)                                                                                                               \
+  X(R11B)                                                                                                              \
+  X(R12)                                                                                                               \
+  X(R12B)                                                                                                              \
+  X(R13)                                                                                                               \
+  X(R13B)                                                                                                              \
+  X(R14)                                                                                                               \
+  X(R14B)                                                                                                              \
+  X(R15)                                                                                                               \
+  X(R15B)                                                                                                              \
+  X(REX)                                                                                                               \
+  X(rAX)                                                                                                               \
+  X(rBX)                                                                                                               \
+  X(rCX)                                                                                                               \
+  X(rDX)                                                                                                               \
+  X(rSP)                                                                                                               \
+  X(rBP)                                                                                                               \
+  X(rSI)                                                                                                               \
+  X(rDI)                                                                                                               \
+  X(Sw)                                                                                                                \
+  X(M)                                                                                                                 \
+  X(Ap)                                                                                                                \
+  X(SS)                                                                                                                \
+  X(DS)                                                                                                                \
+  X(CS)                                                                                                                \
+  X(FS)                                                                                                                \
+  X(GS)                                                                                                                \
+  X(Jb)                                                                                                                \
+  X(Ob)                                                                                                                \
+  X(Ov)                                                                                                                \
+  X(Oz)                                                                                                                \
+  X(Yb)                                                                                                                \
+  X(Yz)                                                                                                                \
+  X(Xb)                                                                                                                \
+  X(Yv)                                                                                                                \
+  X(Xv)                                                                                                                \
+  X(Xz)                                                                                                                \
+  X(DL)                                                                                                                \
+  X(BL)                                                                                                                \
+  X(HL)                                                                                                                \
+  X(AH)                                                                                                                \
+  X(CH)                                                                                                                \
+  X(DH)                                                                                                                \
+  X(BH)                                                                                                                \
+  X(DX)                                                                                                                \
+  X(Jz)                                                                                                                \
+  X(One)
+
+enum class OperandCode : std::uint16_t
 {
-  None,
-  Eb,
-  Es,
-  Gb,
-  Ev,
-  Gv,
-  Ma,
-  AL,
-
-  // MMX register
-  Q,
-
-  // XMM register
-  W,
-
-  // MMX register
-  N,
-
-  CL,
-
-  Fv,
-
-  Ew,
-
-  Ib,
-  Iw,
-  Iv,
-  Iz,
-
-  eAX,
-  eBX,
-  eBP,
-  eCX,
-  eDX,
-  eDI,
-  eSP,
-  eSI,
-
-  R8,
-  R8B,
-
-  R9,
-  R9B,
-
-  R10,
-  R10B,
-
-  R11,
-  R11B,
-
-  R12,
-  R12B,
-
-  R13,
-  R13B,
-
-  R14,
-  R14B,
-
-  R15,
-  R15B,
-
-  REX,
-  rAX,
-  rBX,
-  rCX,
-  rDX,
-  rSP,
-  rBP,
-  rSI,
-  rDI,
-
-  Sw,
-  M,
-  Ap,
-
-
-  // segment registers
-  SS,
-  DS,
-  CS,
-  FS,
-  GS,
-
-  // jump target dst in Jmp Mnemonic
-  Jb,
-
-  Ob,
-  Ov,
-  Oz,
-  Yb,
-  Yz,
-  Xb,
-  Yv,
-  Xv,
-  Xz,
-
-  DL,
-  BL,
-  HL,
-  AH,
-  CH,
-  DH,
-  BH,
-
-  DX,
-  Jz,
-  One,
+#define X(name) name,
+  OPERAND_CODE_LIST(X)
+#undef X
 };
+
+constexpr std::string_view ToString(OperandCode Value) noexcept
+{
+  switch(Value)
+  {
+#define X(name)                                                                                                        \
+  case OperandCode::name:                                                                                              \
+    return #name;
+
+    OPERAND_CODE_LIST(X)
+
+#undef X
+  }
+
+  return "Unknown";
+}
 
 // opcode 0x80-0x83
 static constexpr Mnemonic GROUP1[8] = {
