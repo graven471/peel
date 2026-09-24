@@ -12,7 +12,6 @@
 #include "x86-64/Registers.hpp"
 #include "x86-64/Types.hpp"
 
-
 void Disassembler::DoIt()
 {
   constexpr std::array TextSectionName{'.', 't', 'e', 'x', 't', '\0', '\0', '\0'};
@@ -29,39 +28,39 @@ void Disassembler::DoIt()
 
   ImageSection& TextSection = *It;
 
-  //std::span<const std::byte> InstructionEncoding = TextSection.Data.subspan(8, 32);
+  std::span<const std::byte> InstructionEncoding = TextSection.Data.subspan(8, 128);
 
-  std::span<const std::byte> InstructionEncoding = TestBytesSpan;
+  //std::span<const std::byte> InstructionEncoding = TestBytesSpan;
 
-  // fetches the prefix if available and slides the InstructionEncoding to after prefix
-  // e.g. if prefix is 2-bytes then InstructionEncoding will be subspan(2, ...)
-  PrefixScanner(InstructionEncoding);
-  OpcodeResult Opcode = OpcodeScanner(InstructionEncoding);
-
-  // todo: abstract this into some metadata lookup function
-  InstructionDesc OpcodeMetadata = OPCODE_TABLE[std::to_integer<std::uint8_t>(Opcode.Bytes[0])];
-
-  std::println("{} {}, {}", ToString(OpcodeMetadata.mnemonic), ToString(OpcodeMetadata.Destination),
-               ToString(OpcodeMetadata.Source));
-
-  // todo: abstract this
-  if(OpcodeMetadata.ModRM)
+  while(!InstructionEncoding.empty())
   {
-    const std::byte ModRMByte = InstructionEncoding[0];
-    std::println("ModR/M is 0x{:02x}", std::to_integer<uint8_t>(ModRMByte));
+    // fetches the prefix if available and slides the InstructionEncoding to after prefix
+    // e.g. if prefix is 2-bytes then InstructionEncoding will be subspan(2, ...)
+    PrefixScanner(InstructionEncoding);
+    OpcodeResult Opcode = OpcodeScanner(InstructionEncoding);
 
-    ModRM ModRM = ModRMScanner(ModRMByte);
-    // slide InstructionEncoding to point after ModR/M byte
-    InstructionEncoding = InstructionEncoding.subspan(1);
+    // todo: abstract this into some metadata lookup function
+    InstructionDesc OpcodeMetadata = OPCODE_TABLE[std::to_integer<std::uint8_t>(Opcode.Bytes[0])];
 
-    BuildModRMInstruction(ModRM, OpcodeMetadata);
+    //std::println("{} {}, {}", ToString(OpcodeMetadata.mnemonic), ToString(OpcodeMetadata.Destination),
+    //             ToString(OpcodeMetadata.Source));
+
+    // todo: abstract this
+    if(OpcodeMetadata.ModRM)
+    {
+      const std::byte ModRMByte = InstructionEncoding[0];
+      //std::println("ModR/M is 0x{:02x}", std::to_integer<uint8_t>(ModRMByte));
+
+      ModRM ModRM = ModRMScanner(ModRMByte);
+      // slide InstructionEncoding to point after ModR/M byte
+      InstructionEncoding = InstructionEncoding.subspan(1);
+
+      // pass Bytes so that it can read disp{8,32} and slide it
+      BuildModRMInstruction(ModRM, OpcodeMetadata, InstructionEncoding);
+    }
   }
 }
 
-// the reason we need to pass reference here because even tho span is just ptr and size
-// is that if we pass by value it will underlying ptr and size and construct a local span
-// and modification will be on that local span instead of modifying Bytes which is in caller stack frame
-// i thought since its a pointer they both will point to same data so i can modify it without reference
 void Disassembler::PrefixScanner(std::span<const std::byte>& Bytes)
 {
   // for I in instruction encoding:
@@ -115,10 +114,10 @@ void Disassembler::PrefixScanner(std::span<const std::byte>& Bytes)
   Bytes = Bytes.subspan(PrefixCount);
 
   // todo: have some kind of structure or data that stores prefixes and group
-  for(size_t I = 0; I < Prefixes.size(); I++)
-  {
-    std::print("Prefix: 0x{:02x} ", std::to_integer<uint8_t>(Prefixes[I]));
-  }
+  //for(size_t I = 0; I < Prefixes.size(); I++)
+  //{
+  //  std::print("Prefix: 0x{:02x} ", std::to_integer<uint8_t>(Prefixes[I]));
+  //}
 }
 
 // note some opcode requires ModR/M and some don't so i have return
@@ -278,18 +277,25 @@ ModRMOperandInfo Disassembler::ResolveModRM(const ModRM& ModRm, const Instructio
 {
   struct ModRMOperandInfo Info{};
 
-  Info.Rm  = ResolveRegister(ModRm.Rm, OperandSize::Bits32);
-  Info.Reg = ResolveRegister(ModRm.Reg, OperandSize::Bits32);
+  Info.Rm  = ResolveRegister(ModRm.Rm, OperandSize::Bits64);
+  Info.Reg = ResolveRegister(ModRm.Reg, OperandSize::Bits64);
 
   if(MetaData.Destination == OperandCode::Ev && MetaData.Source == OperandCode::Gv)
   {
     Info.Destination = ModRMField::Rm;
     Info.Source      = ModRMField::Reg;
   }
-
-  // generic fallback for now
-  Info.Destination = ModRMField::Reg;
-  Info.Source      = ModRMField::Rm;
+  else if(MetaData.Destination == OperandCode::Gv && MetaData.Source == OperandCode::Ev)
+  {
+    Info.Destination = ModRMField::Reg;
+    Info.Source      = ModRMField::Rm;
+  }
+  else
+  {
+    // generic fallback for now
+    Info.Destination = ModRMField::Reg;
+    Info.Source      = ModRMField::Rm;
+  }
 
   switch(static_cast<ModRMMode>(ModRm.Mod))
   {
@@ -317,19 +323,49 @@ ModRMOperandInfo Disassembler::ResolveModRM(const ModRM& ModRm, const Instructio
   return Info;
 }
 
-void Disassembler::BuildModRMInstruction(const ModRM& ModRm, const InstructionDesc& MetaData)
+void Disassembler::BuildModRMInstruction(const ModRM& ModRm, const InstructionDesc& MetaData, std::span<const std::byte>& Bytes)
 {
   ModRMOperandInfo Info     = ResolveModRM(ModRm, MetaData);
   std::string_view Mnemonic = ToString(MetaData.mnemonic);
 
+  if(Info.Mode == ModRMMode::MemoryDisp8 || Info.Mode == ModRMMode::MemoryDisp32)
+  {
+    auto GetDisp = [&]() -> std::int32_t {
+      std::int32_t Disp{};
+
+      if(Info.Mode == ModRMMode::MemoryDisp8)
+      {
+        std::int8_t Value{};
+        std::memcpy(&Value, Bytes.data(), sizeof(Value));
+        // sign-extend to int32_t
+        Disp  = Value;
+        Bytes = Bytes.subspan(sizeof(Value));
+
+        return Disp;
+      }
+
+      std::memcpy(&Disp, Bytes.data(), sizeof(Disp));
+      Bytes = Bytes.subspan(sizeof(Disp));
+
+      return Disp;
+    };
+
+    // temp abstract this avoid repeting
+    std::string_view SourceRegister      = Info.Source == ModRMField::Rm ? ToString(Info.Rm) : ToString(Info.Reg);
+    std::string_view DestinationRegister = Info.Destination == ModRMField::Rm ? ToString(Info.Rm) : ToString(Info.Reg);
+    std::int32_t     Disp                = GetDisp();
+
+    std::println("{} {}, [{} + 0x{:02x}]", Mnemonic, DestinationRegister, SourceRegister, Disp);
+    return;
+  }
+
   if(Info.Mode == ModRMMode::Register || Info.Mode == ModRMMode::MemoryNoDisplacement)
   {
-    std::string_view SourceRegister      = Info.Destination == ModRMField::Rm ? ToString(Info.Rm) : ToString(Info.Reg);
+    std::string_view SourceRegister      = Info.Source == ModRMField::Rm ? ToString(Info.Rm) : ToString(Info.Reg);
     std::string_view DestinationRegister = Info.Destination == ModRMField::Rm ? ToString(Info.Rm) : ToString(Info.Reg);
-
-    auto Format = Info.Mode == ModRMMode::MemoryNoDisplacement ?
-                      std::format("{} {}, [{}]", Mnemonic, DestinationRegister, SourceRegister) :
-                      std::format("{} {}, {}", Mnemonic, DestinationRegister, SourceRegister);
+    auto             Format = Info.Mode == ModRMMode::MemoryNoDisplacement ?
+                                  std::format("{} {}, [{}]", Mnemonic, DestinationRegister, SourceRegister) :
+                                  std::format("{} {}, {}", Mnemonic, DestinationRegister, SourceRegister);
 
     std::println("{}", Format);
   }

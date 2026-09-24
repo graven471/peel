@@ -56,7 +56,7 @@ private:
   OpcodeResult     OpcodeScanner(std::span<const std::byte>& Bytes);
   ModRM            ModRMScanner(const std::byte Byte);
   ModRMOperandInfo ResolveModRM(const ModRM& ModRm, const InstructionDesc& MetaData);
-  void             BuildModRMInstruction(const ModRM& ModRm, const InstructionDesc& MetaData);
+  void BuildModRMInstruction(const ModRM& ModRm, const InstructionDesc& MetaData, std::span<const std::byte>& Bytes);
 
   PEImage* Image = nullptr;
 };
