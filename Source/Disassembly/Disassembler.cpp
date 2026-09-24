@@ -330,6 +330,19 @@ void Disassembler::BuildModRMInstruction(const ModRM& ModRm, const InstructionDe
 
   if(Info.Mode == ModRMMode::MemoryDisp8 || Info.Mode == ModRMMode::MemoryDisp32)
   {
+    // the general formula is that if not ModR/M.mod = 3 and ModR/M.rm = 4 then the next byte is SIB
+    // but since in this condition we know that Mod is memory access we can just check for r/m
+    if(ModRm.Rm == 4)
+    {
+      std::uint8_t Sib{};
+      std::memcpy(&Sib, Bytes.data(), sizeof(Sib));
+
+      // slide Bytes to point after SIB
+      Bytes = Bytes.subspan(sizeof(Sib));
+
+      std::println("SIB: 0x{:02x}", Sib);
+    }
+
     auto GetDisp = [&]() -> std::int32_t {
       std::int32_t Disp{};
 

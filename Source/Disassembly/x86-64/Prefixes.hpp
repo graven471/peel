@@ -82,8 +82,7 @@ constexpr std::array<std::byte, 5> TestMap3Opcode{
     std::byte{0x00},                   // padding
 };
 
-// ADD Ev, Gv
-constexpr std::array<std::byte, 6> TestModRMOpcode{std::byte{0x8B}, std::byte{0x86}, std::byte{0x00},
-                                                   std::byte{0x01}, std::byte{0x04}, std::byte{0x3A}};
+// 48 8B 44 8C 10 => MOV RAX, [RSP + RCX * 4 + 0x10]
+constexpr std::array<std::byte, 4> TestModRMOpcode{std::byte{0x8B}, std::byte{0x44}, std::byte{0x8C}, std::byte{0x10}};
 
 inline auto TestBytesSpan = std::span{TestModRMOpcode};
