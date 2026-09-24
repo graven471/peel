@@ -10,6 +10,8 @@
 #include "x86-64/Prefixes.hpp"
 #include "x86-64/Instructions.hpp"
 #include "x86-64/Registers.hpp"
+#include "x86-64/Types.hpp"
+
 
 void Disassembler::DoIt()
 {
@@ -272,39 +274,63 @@ ModRM Disassembler::ModRMScanner(const std::byte Byte)
   return ModRM{.Mod = Mod, .Reg = Reg, .Rm = Rm};
 }
 
-void Disassembler::BuildModRMInstruction(const ModRM& ModRm, const InstructionDesc& MetaData)
+ModRMOperandInfo Disassembler::ResolveModRM(const ModRM& ModRm, const InstructionDesc& MetaData)
 {
-  // mod 3 => register
-  // mod 1 => memory address
+  struct ModRMOperandInfo Info{};
 
-  // Ev first then ModR/M.r/m = dst
-  // Gv first then ModR/M.reg = dst
+  Info.Rm  = ResolveRegister(ModRm.Rm, OperandSize::Bits32);
+  Info.Reg = ResolveRegister(ModRm.Reg, OperandSize::Bits32);
 
-  if(ModRm.Mod != 3 && ModRm.Mod == 0)
-  {
-    // todo: memory address disp etc
-    return;
-  }
-
-  std::string_view DestinationRegister{};
-  std::string_view SourceRegister{};
-
-  // todo: handle this in better way
   if(MetaData.Destination == OperandCode::Ev && MetaData.Source == OperandCode::Gv)
   {
-    DestinationRegister = ToString(ResolveRegister(ModRm.Rm, OperandSize::Bits32));
-    SourceRegister      = ToString(ResolveRegister(ModRm.Reg, OperandSize::Bits32));
-  }
-  else if(MetaData.Destination == OperandCode::Gv && MetaData.Source == OperandCode::Ev)
-  {
-    DestinationRegister = ToString(ResolveRegister(ModRm.Reg, OperandSize::Bits32));
-    SourceRegister      = ToString(ResolveRegister(ModRm.Rm, OperandSize::Bits32));
-  }
-  else
-  {
-    std::println("unsupported");
-    return;
+    Info.Destination = ModRMField::Rm;
+    Info.Source      = ModRMField::Reg;
   }
 
-  std::println("{} {}, {}", ToString(MetaData.mnemonic), DestinationRegister, SourceRegister);
+  // generic fallback for now
+  Info.Destination = ModRMField::Reg;
+  Info.Source      = ModRMField::Rm;
+
+  switch(static_cast<ModRMMode>(ModRm.Mod))
+  {
+    case ModRMMode::Register:
+      Info.Mode = ModRMMode::Register;
+      break;
+
+    case ModRMMode::MemoryNoDisplacement:
+      Info.Mode = ModRMMode::MemoryNoDisplacement;
+      break;
+
+    case ModRMMode::MemoryDisp8:
+      Info.Mode = ModRMMode::MemoryDisp8;
+      break;
+
+    case ModRMMode::MemoryDisp32:
+      Info.Mode = ModRMMode::MemoryDisp32;
+      break;
+
+    default:
+      std::println(stderr, "Invalid ModRM.mod");
+      std::unreachable();
+  }
+
+  return Info;
+}
+
+void Disassembler::BuildModRMInstruction(const ModRM& ModRm, const InstructionDesc& MetaData)
+{
+  ModRMOperandInfo Info     = ResolveModRM(ModRm, MetaData);
+  std::string_view Mnemonic = ToString(MetaData.mnemonic);
+
+  if(Info.Mode == ModRMMode::Register || Info.Mode == ModRMMode::MemoryNoDisplacement)
+  {
+    std::string_view SourceRegister      = Info.Destination == ModRMField::Rm ? ToString(Info.Rm) : ToString(Info.Reg);
+    std::string_view DestinationRegister = Info.Destination == ModRMField::Rm ? ToString(Info.Rm) : ToString(Info.Reg);
+
+    auto Format = Info.Mode == ModRMMode::MemoryNoDisplacement ?
+                      std::format("{} {}, [{}]", Mnemonic, DestinationRegister, SourceRegister) :
+                      std::format("{} {}, {}", Mnemonic, DestinationRegister, SourceRegister);
+
+    std::println("{}", Format);
+  }
 }

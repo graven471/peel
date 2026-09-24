@@ -4,7 +4,7 @@
 #include <string_view>
 #include <print>
 #include <utility>
-#include "Opcodes.hpp"
+#include "Types.hpp"
 
 #define REGISTER_LIST(X)                                                                                               \
   X(AL)                                                                                                                \
@@ -97,7 +97,7 @@ constexpr std::string_view ToString(Register Value) noexcept
   X(6, RSI, ESI)                                                                                                       \
   X(7, RDI, EDI)
 
-Register ResolveRegister(std::uint8_t Encoding, OperandSize Size)
+constexpr Register ResolveRegister(std::uint8_t Encoding, OperandSize Size)
 {
   switch(Encoding)
   {
@@ -106,11 +106,9 @@ Register ResolveRegister(std::uint8_t Encoding, OperandSize Size)
     return Size == OperandSize::Bits64 ? Register::reg64 : Register::reg32;
 
     GPR_REGISTERS(X)
-
 #undef X
 
     default:
-      std::println(stderr, "Invalid operand size");
       std::unreachable();
   }
 }

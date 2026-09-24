@@ -83,6 +83,6 @@ constexpr std::array<std::byte, 5> TestMap3Opcode{
 };
 
 // ADD Ev, Gv
-constexpr std::array<std::byte, 2> TestModRMOpcode{std::byte{0x8B}, std::byte{0xD8}};
+constexpr std::array<std::byte, 2> TestModRMOpcode{std::byte{0x8B}, std::byte{0x06}};
 
 inline auto TestBytesSpan = std::span{TestModRMOpcode};
