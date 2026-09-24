@@ -52,28 +52,7 @@ void Disassembler::DoIt()
     // slide InstructionEncoding to point after ModR/M byte
     InstructionEncoding = InstructionEncoding.subspan(1);
 
-    // r/m refers to register
-    if(ModRM.Mod == 3)
-    {
-      if(OpcodeMetadata.Destination == OperandCode::Ev && OpcodeMetadata.Source == OperandCode::Gv)
-      {
-        std::string_view DestinationRegister = ToString(ResolveRegister(ModRM.Rm, OperandSize::Bits32));
-        std::string_view SourceRegister      = ToString(ResolveRegister(ModRM.Reg, OperandSize::Bits32));
-
-        std::println("{} {}, {}", ToString(OpcodeMetadata.mnemonic), DestinationRegister, SourceRegister);
-      }
-      else if(OpcodeMetadata.Destination == OperandCode::Gv && OpcodeMetadata.Source == OperandCode::Ev)
-      {
-        std::string_view DestinationRegister = ToString(ResolveRegister(ModRM.Reg, OperandSize::Bits32));
-        std::string_view SourceRegister      = ToString(ResolveRegister(ModRM.Rm, OperandSize::Bits32));
-        std::println("{} {}, {}", ToString(OpcodeMetadata.mnemonic), DestinationRegister, SourceRegister);
-      }
-      else
-      {
-        // Unsupported operand combination for now.
-        return;
-      }
-    }
+    BuildModRMInstruction(ModRM, OpcodeMetadata);
   }
 }
 
@@ -291,4 +270,41 @@ ModRM Disassembler::ModRMScanner(const std::byte Byte)
   std::println("Mod: 0x{:02x}, Reg: 0x{:02x}, Rm: 0x{:02x}", Mod, Reg, Rm);
 
   return ModRM{.Mod = Mod, .Reg = Reg, .Rm = Rm};
+}
+
+void Disassembler::BuildModRMInstruction(const ModRM& ModRm, const InstructionDesc& MetaData)
+{
+  // mod 3 => register
+  // mod 1 => memory address
+
+  // Ev first then ModR/M.r/m = dst
+  // Gv first then ModR/M.reg = dst
+
+  if(ModRm.Mod != 3 && ModRm.Mod == 0)
+  {
+    // todo: memory address disp etc
+    return;
+  }
+
+  std::string_view DestinationRegister{};
+  std::string_view SourceRegister{};
+
+  // todo: handle this in better way
+  if(MetaData.Destination == OperandCode::Ev && MetaData.Source == OperandCode::Gv)
+  {
+    DestinationRegister = ToString(ResolveRegister(ModRm.Rm, OperandSize::Bits32));
+    SourceRegister      = ToString(ResolveRegister(ModRm.Reg, OperandSize::Bits32));
+  }
+  else if(MetaData.Destination == OperandCode::Gv && MetaData.Source == OperandCode::Ev)
+  {
+    DestinationRegister = ToString(ResolveRegister(ModRm.Reg, OperandSize::Bits32));
+    SourceRegister      = ToString(ResolveRegister(ModRm.Rm, OperandSize::Bits32));
+  }
+  else
+  {
+    std::println("unsupported");
+    return;
+  }
+
+  std::println("{} {}, {}", ToString(MetaData.mnemonic), DestinationRegister, SourceRegister);
 }

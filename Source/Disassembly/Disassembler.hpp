@@ -2,6 +2,8 @@
 
 #include "Parser/PETypes.hpp"
 
+struct InstructionDesc;
+
 struct OpcodeResult
 {
   std::array<std::byte, 3> Bytes{};
@@ -27,6 +29,7 @@ private:
   void         PrefixScanner(std::span<const std::byte>& Bytes);
   OpcodeResult OpcodeScanner(std::span<const std::byte>& Bytes);
   ModRM        ModRMScanner(const std::byte Byte);
+  void         BuildModRMInstruction(const ModRM& ModRm, const InstructionDesc& MetaData);
 
   PEImage* Image = nullptr;
 };
