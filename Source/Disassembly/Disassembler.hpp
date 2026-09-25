@@ -43,6 +43,13 @@ struct ModRMOperandInfo
   Register Rm;
 };
 
+struct SIB
+{
+  std::uint8_t Scale{};
+  std::uint8_t Index{};
+  std::uint8_t Base{};
+};
+
 class Disassembler
 {
 public:
@@ -56,6 +63,7 @@ private:
   OpcodeResult     OpcodeScanner(std::span<const std::byte>& Bytes);
   ModRM            ModRMScanner(const std::byte Byte);
   ModRMOperandInfo ResolveModRM(const ModRM& ModRm, const InstructionDesc& MetaData);
+  SIB              GetSibFromByte(std::uint8_t Byte);
   void BuildModRMInstruction(const ModRM& ModRm, const InstructionDesc& MetaData, std::span<const std::byte>& Bytes);
 
   PEImage* Image = nullptr;

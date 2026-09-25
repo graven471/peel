@@ -323,6 +323,33 @@ ModRMOperandInfo Disassembler::ResolveModRM(const ModRM& ModRm, const Instructio
   return Info;
 }
 
+SIB Disassembler::GetSibFromByte(std::uint8_t Byte)
+{
+  // the SIB is defined like this
+  // bits 7:6 => scale
+  // bits 5:3 => index
+  // bits 2:0 => base
+
+  // so to read scale shift it right by 6 so index 7 becomes 1 and index 6 becomes 0
+  // then apply AND operation with a mask where mask bits is 1 for target
+  // here out target bits index is 0 and 1
+  // so mask = 0b00000011 (0x3)
+
+  // same for index shift right by 3 so that 5 index changes to 2, 4 changes to 1 and 3 changes to 0
+  // then apply AND operation using a mask where bit index 2..0 is 1 and everything else 0
+  // so mask = 0b00000111 (0x7)
+
+  // we don't need to shift for index since its already at right most just apply a mask where
+  // bits 0..2 is 1 and everything else 0 and collect in u8
+  // so mask = 0b00000111 (0x7)
+
+  return SIB{
+      .Scale = static_cast<std::uint8_t>((Byte >> 6) & 0x03),
+      .Index = static_cast<std::uint8_t>((Byte >> 3) & 0x07),
+      .Base  = static_cast<std::uint8_t>(Byte & 0x07),
+  };
+}
+
 void Disassembler::BuildModRMInstruction(const ModRM& ModRm, const InstructionDesc& MetaData, std::span<const std::byte>& Bytes)
 {
   ModRMOperandInfo Info     = ResolveModRM(ModRm, MetaData);
@@ -330,17 +357,19 @@ void Disassembler::BuildModRMInstruction(const ModRM& ModRm, const InstructionDe
 
   if(Info.Mode == ModRMMode::MemoryDisp8 || Info.Mode == ModRMMode::MemoryDisp32)
   {
+    bool HasSib = false;
+    SIB  Sib{};
+
     // the general formula is that if not ModR/M.mod = 3 and ModR/M.rm = 4 then the next byte is SIB
     // but since in this condition we know that Mod is memory access we can just check for r/m
     if(ModRm.Rm == 4)
     {
-      std::uint8_t Sib{};
-      std::memcpy(&Sib, Bytes.data(), sizeof(Sib));
-
+      std::uint8_t SibByte{};
+      std::memcpy(&SibByte, Bytes.data(), sizeof(SibByte));
       // slide Bytes to point after SIB
-      Bytes = Bytes.subspan(sizeof(Sib));
-
-      std::println("SIB: 0x{:02x}", Sib);
+      Bytes  = Bytes.subspan(sizeof(SibByte));
+      HasSib = true;
+      Sib    = GetSibFromByte(SibByte);
     }
 
     auto GetDisp = [&]() -> std::int32_t {
@@ -362,6 +391,11 @@ void Disassembler::BuildModRMInstruction(const ModRM& ModRm, const InstructionDe
 
       return Disp;
     };
+
+    if(HasSib)
+    {
+      std::println("Scale: {}, Index: {}, Base: {}", Sib.Scale, Sib.Index, Sib.Base);
+    }
 
     // temp abstract this avoid repeting
     std::string_view SourceRegister      = Info.Source == ModRMField::Rm ? ToString(Info.Rm) : ToString(Info.Reg);
