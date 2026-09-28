@@ -277,6 +277,7 @@ ModRMOperandInfo Disassembler::ResolveModRM(const ModRM& ModRm, const Instructio
 {
   struct ModRMOperandInfo Info{};
 
+  // todo: replace operand size with REX.W prefix check
   Info.Rm  = ResolveRegister(ModRm.Rm, OperandSize::Bits64);
   Info.Reg = ResolveRegister(ModRm.Reg, OperandSize::Bits64);
 
@@ -344,8 +345,8 @@ SIB Disassembler::GetSibFromByte(std::uint8_t Byte)
   // so mask = 0b00000111 (0x7)
 
   return SIB{
-      .Scale = static_cast<std::uint8_t>((Byte >> 6) & 0x03),
-      .Index = static_cast<std::uint8_t>((Byte >> 3) & 0x07),
+      .Scale = static_cast<std::int8_t>((Byte >> 6) & 0x03),
+      .Index = static_cast<std::int8_t>((Byte >> 3) & 0x07),
       .Base  = static_cast<std::uint8_t>(Byte & 0x07),
   };
 }
@@ -368,8 +369,8 @@ void Disassembler::BuildModRMInstruction(const ModRM& ModRm, const InstructionDe
       std::memcpy(&SibByte, Bytes.data(), sizeof(SibByte));
       // slide Bytes to point after SIB
       Bytes  = Bytes.subspan(sizeof(SibByte));
-      HasSib = true;
       Sib    = GetSibFromByte(SibByte);
+      HasSib = true;
     }
 
     auto GetDisp = [&]() -> std::int32_t {
@@ -392,17 +393,50 @@ void Disassembler::BuildModRMInstruction(const ModRM& ModRm, const InstructionDe
       return Disp;
     };
 
-    if(HasSib)
-    {
-      std::println("Scale: {}, Index: {}, Base: {}", Sib.Scale, Sib.Index, Sib.Base);
-    }
+    auto build_base_address = [&]() -> EffectiveAddress {
+      // if SIB does not exists then just memcpy disp hand 1-byte and 4-bytes and return
+      // otherwise if sib exists then build effective address by using formula
+      // effective_address = SIB.scale * SIB.index + SIB.base + disp{8,32}
+
+      std::int32_t displacement{};
+      SIB          sib{};
+
+      EffectiveAddress effective_address{};
+
+      if(Info.Mode == ModRMMode::MemoryDisp8)
+      {
+        std::int8_t disp{};
+        std::memcpy(&disp, Bytes.data(), sizeof(std::int8_t));
+        Bytes = Bytes.subspan(sizeof(std::int8_t));
+
+        // sign-extent
+        effective_address.displacement = disp;
+      }
+      else if(Info.Mode == ModRMMode::MemoryDisp32)
+      {
+        std::memcpy(&effective_address.displacement, Bytes.data(), sizeof(std::int32_t));
+        Bytes = Bytes.subspan(sizeof(std::int32_t));
+      }
+
+      if(ModRm.Rm == 4)
+      {
+        std::uint8_t sib_byte{};
+        std::memcpy(&sib_byte, Bytes.data(), sizeof(sib_byte));
+        Bytes                 = Bytes.subspan(sizeof(sib_byte));
+        effective_address.sib = GetSibFromByte(sib_byte);
+      }
+
+      return effective_address;
+    };
 
     // temp abstract this avoid repeting
     std::string_view SourceRegister      = Info.Source == ModRMField::Rm ? ToString(Info.Rm) : ToString(Info.Reg);
     std::string_view DestinationRegister = Info.Destination == ModRMField::Rm ? ToString(Info.Rm) : ToString(Info.Reg);
     std::int32_t     Disp                = GetDisp();
+    EffectiveAddress effective_address   = build_base_address();
 
-    std::println("{} {}, [{} + 0x{:02x}]", Mnemonic, DestinationRegister, SourceRegister, Disp);
+    std::println("{} {}, {}", Mnemonic, DestinationRegister,
+                 effective_address.render_sib(OperandSize::Bits64, false, Image->NTHeaders));
     return;
   }
 

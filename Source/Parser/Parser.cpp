@@ -75,6 +75,9 @@ image size to 2 GB
       .OptionalHeader = *OptionalHeader,
   };
 
+  // todo: i don't like this
+  std::visit([&](auto&& header) { NTHeaders.Format = header.Format; }, NTHeaders.OptionalHeader);
+
   const std::size_t SectionHeaderOffset =
       DosHeader->LfaNew + sizeof(SIGNATURE) + sizeof(ImageFileHeader) + FileHeader->SizeOfOptionalHeader;
 

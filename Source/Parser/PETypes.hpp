@@ -12,54 +12,55 @@
 // "MZ"
 constexpr uint16_t PE_MAGIC = 0x5A4D;
 // "PE\0\0"
-constexpr std::array<std::byte, 4> SIGNATURE = {
-    std::byte{0x50}, std::byte{0x45}, std::byte{0x00}, std::byte{0x00}};
+constexpr std::array<std::byte, 4> SIGNATURE = {std::byte{0x50}, std::byte{0x45}, std::byte{0x00}, std::byte{0x00}};
 
 constexpr std::size_t NUMBEROF_DIRECTORY_ENTRIES = 16;
 
-struct ImageDosHeader {           // DOS .EXE header
-  uint16_t Magic;                 // Magic number
-  uint16_t Cblp;                  // Bytes on last page of file
-  uint16_t Cp;                    // Pages in file
-  uint16_t Crlc;                  // Relocations
-  uint16_t CparHdr;               // Size of header in paragraphs
-  uint16_t MinAlloc;              // Minimum extra paragraphs needed
-  uint16_t MaxAlloc;              // Maximum extra paragraphs needed
-  uint16_t Ss;                    // Initial (relative) SS value
-  uint16_t Sp;                    // Initial SP value
-  uint16_t CSum;                  // Checksum
-  uint16_t Ip;                    // Initial IP value
-  uint16_t Cs;                    // Initial (relative) CS value
-  uint16_t LfarLc;                // File address of relocation table
-  uint16_t Ovno;                  // Overlay number
-  std::array<uint16_t, 4> Res;    // Reserved uint16_ts
-  uint16_t Oemid;                 // OEM identifier (for e_oeminfo)
-  uint16_t OemInfo;               // OEM information; e_oemid specific
-  std::array<uint16_t, 10> Res2;  // Reserved uint16_ts
-  int32_t LfaNew;                 // File address of new exe header
+struct ImageDosHeader
+{                                     // DOS .EXE header
+  uint16_t                 Magic;     // Magic number
+  uint16_t                 Cblp;      // Bytes on last page of file
+  uint16_t                 Cp;        // Pages in file
+  uint16_t                 Crlc;      // Relocations
+  uint16_t                 CparHdr;   // Size of header in paragraphs
+  uint16_t                 MinAlloc;  // Minimum extra paragraphs needed
+  uint16_t                 MaxAlloc;  // Maximum extra paragraphs needed
+  uint16_t                 Ss;        // Initial (relative) SS value
+  uint16_t                 Sp;        // Initial SP value
+  uint16_t                 CSum;      // Checksum
+  uint16_t                 Ip;        // Initial IP value
+  uint16_t                 Cs;        // Initial (relative) CS value
+  uint16_t                 LfarLc;    // File address of relocation table
+  uint16_t                 Ovno;      // Overlay number
+  std::array<uint16_t, 4>  Res;       // Reserved uint16_ts
+  uint16_t                 Oemid;     // OEM identifier (for e_oeminfo)
+  uint16_t                 OemInfo;   // OEM information; e_oemid specific
+  std::array<uint16_t, 10> Res2;      // Reserved uint16_ts
+  int32_t                  LfaNew;    // File address of new exe header
 };
 
-static_assert(sizeof(ImageDosHeader) == 64 &&
-              "Dos Header must needs to be 64 bytes");
+static_assert(sizeof(ImageDosHeader) == 64 && "Dos Header must needs to be 64 bytes");
 static_assert(offsetof(ImageDosHeader, LfaNew) == 0x3C);
 
-enum class MachineType : uint16_t {
-  MACHINE_UNKNOWN = 0x00,
-  MACHINE_ALPHA = 0x184,
-  MACHINE_ALPHA64 = 0x284,
-  MACHINE_AMD64 = 0x8664,
-  MACHINE_ARM = 0x1c0,
-  MACHINE_ARM64 = 0xaa64,
-  MACHINE_I386 = 0x14c,
-  MACHINE_RISCV32 = 0x5032,
-  MACHINE_RISCV64 = 0x5064,
+enum class MachineType : uint16_t
+{
+  MACHINE_UNKNOWN  = 0x00,
+  MACHINE_ALPHA    = 0x184,
+  MACHINE_ALPHA64  = 0x284,
+  MACHINE_AMD64    = 0x8664,
+  MACHINE_ARM      = 0x1c0,
+  MACHINE_ARM64    = 0xaa64,
+  MACHINE_I386     = 0x14c,
+  MACHINE_RISCV32  = 0x5032,
+  MACHINE_RISCV64  = 0x5064,
   MACHINE_RISCV128 = 0x5128,
 
   // OG
   MACHINE_POWERPC = 0x1f0
 };
 
-enum class FileCharacteristics : uint16_t {
+enum class FileCharacteristics : uint16_t
+{
   // Image only, Windows CE, and Microsoft Windows NT and later.
   // This indicates that the file does not contain base relocations
   // and must therefore be loaded at its preferred base address.
@@ -99,22 +100,23 @@ enum class FileCharacteristics : uint16_t {
   BytesReversedHi = 0x8000,
 };
 
-struct ImageFileHeader {
+struct ImageFileHeader
+{
   MachineType Machine;
-  uint16_t NumberOfSections;
-  uint32_t TimeDateStamp;
-  uint32_t PointerToSymbolTable;
+  uint16_t    NumberOfSections;
+  uint32_t    TimeDateStamp;
+  uint32_t    PointerToSymbolTable;
 
   // total symbols in image
-  uint32_t NumberOfSymbols;
-  uint16_t SizeOfOptionalHeader;
+  uint32_t            NumberOfSymbols;
+  uint16_t            SizeOfOptionalHeader;
   FileCharacteristics Characteristics;
 };
 
-static_assert(sizeof(ImageFileHeader) == 20,
-              "ImageFileHeader must be exactly 20 bytes");
+static_assert(sizeof(ImageFileHeader) == 20, "ImageFileHeader must be exactly 20 bytes");
 
-enum class PEFormat : uint16_t {
+enum class PEFormat : uint16_t
+{
   // 32-bit can only use 32-bit address space no rax, rdi, rsi stuff only e
   // prefix eax, edi etc
   PE32 = 0x10b,
@@ -124,7 +126,8 @@ enum class PEFormat : uint16_t {
 
 // each data directory gives address and size of a table or string that windows
 // uses.
-struct ImageDataDirectory {
+struct ImageDataDirectory
+{
   // RVA of the table. The RVA is the address of the table relative to the base
   // address of the image
   uint32_t VirtualAddress;
@@ -134,32 +137,34 @@ struct ImageDataDirectory {
 
 static_assert(sizeof(ImageDataDirectory) == 8);
 
-enum class DataDirectoryIndex : uint8_t {
+enum class DataDirectoryIndex : uint8_t
+{
   // .edata section (image only) contains information about symbols that other
   // images can access through dynamic linking
   Export = 0,
   // .idata section All image files that import symbols, including virtually all
   // executable (EXE) files, have an .idata section
-  Import = 1,
+  Import   = 1,
   Resource = 2,
   // .pdata section
-  Exception = 3,
-  Certificate = 4,
+  Exception      = 3,
+  Certificate    = 4,
   BaseRelocation = 5,
-  Debug = 6,
-  Architecture = 7,
-  GlobalPtr = 8,
-  TLS = 9,
-  LoadConfig = 10,
-  BoundImport = 11,
-  IAT = 12,
-  DelayImport = 13,
-  CLRRuntime = 14,
-  Reserved = 15,
+  Debug          = 6,
+  Architecture   = 7,
+  GlobalPtr      = 8,
+  TLS            = 9,
+  LoadConfig     = 10,
+  BoundImport    = 11,
+  IAT            = 12,
+  DelayImport    = 13,
+  CLRRuntime     = 14,
+  Reserved       = 15,
 };
 
 // what kind of program is this
-enum class ImageSubsystemType : uint16_t {
+enum class ImageSubsystemType : uint16_t
+{
   // an unknown system
   Unknown = 0,
   // device drivers and native windows processes
@@ -191,11 +196,12 @@ enum class ImageSubsystemType : uint16_t {
 };
 
 #pragma pack(push, 1)
-struct ImageOptionalHeader64 {
+struct ImageOptionalHeader64
+{
   // 64-bit image or 32-bit
   PEFormat Format;
-  uint8_t MajorLinkerVersion;
-  uint8_t MinorLinkerVersion;
+  uint8_t  MajorLinkerVersion;
+  uint8_t  MinorLinkerVersion;
   // size of the .text section combined
   uint32_t SizeOfCode;
   // size of .data section
@@ -244,14 +250,14 @@ struct ImageOptionalHeader64 {
   std::array<ImageDataDirectory, NUMBEROF_DIRECTORY_ENTRIES> ImageDataDirectory;
 };
 
-static_assert(sizeof(ImageOptionalHeader64) == 240 &&
-              "Optional Header 64 Must be 240 bytes");
+static_assert(sizeof(ImageOptionalHeader64) == 240 && "Optional Header 64 Must be 240 bytes");
 
-struct ImageOptionalHeader32 {
+struct ImageOptionalHeader32
+{
   // 64-bit image or 32-bit
   PEFormat Format;
-  uint8_t MajorLinkerVersion;
-  uint8_t MinorLinkerVersion;
+  uint8_t  MajorLinkerVersion;
+  uint8_t  MinorLinkerVersion;
   // size of the .text section combined
   uint32_t SizeOfCode;
   // size of .data section
@@ -265,48 +271,51 @@ struct ImageOptionalHeader32 {
   uint32_t BaseOfData;
 
   // Windows specific fields (Image only)
-  uint64_t ImageBase;
-  uint32_t SectionAlignment;
-  uint32_t FileAlignment;
-  uint16_t MajorOperatingSystemVersion;
-  uint16_t MinorOperatingSystemVersion;
-  uint16_t MajorImageVersion;
-  uint16_t MinorImageVersion;
-  uint16_t MajorSubsystemVersion;
-  uint16_t MinorSubsystemVersion;
-  uint32_t Win32VersionValue;
-  uint32_t SizeOfImage;
-  uint32_t SizeOfHeaders;
-  uint32_t CheckSum;
-  ImageSubsystemType Subsystem;
-  uint16_t DllCharacteristics;
-  uint64_t SizeOfStackReserve;
-  uint64_t SizeOfStackCommit;
-  uint64_t SizeOfHeapReserve;
-  uint64_t SizeOfHeapCommit;
-  uint32_t LoaderFlags;
-  uint32_t NumberOfRvaAndSizes;
+  uint64_t                                                   ImageBase;
+  uint32_t                                                   SectionAlignment;
+  uint32_t                                                   FileAlignment;
+  uint16_t                                                   MajorOperatingSystemVersion;
+  uint16_t                                                   MinorOperatingSystemVersion;
+  uint16_t                                                   MajorImageVersion;
+  uint16_t                                                   MinorImageVersion;
+  uint16_t                                                   MajorSubsystemVersion;
+  uint16_t                                                   MinorSubsystemVersion;
+  uint32_t                                                   Win32VersionValue;
+  uint32_t                                                   SizeOfImage;
+  uint32_t                                                   SizeOfHeaders;
+  uint32_t                                                   CheckSum;
+  ImageSubsystemType                                         Subsystem;
+  uint16_t                                                   DllCharacteristics;
+  uint64_t                                                   SizeOfStackReserve;
+  uint64_t                                                   SizeOfStackCommit;
+  uint64_t                                                   SizeOfHeapReserve;
+  uint64_t                                                   SizeOfHeapCommit;
+  uint32_t                                                   LoaderFlags;
+  uint32_t                                                   NumberOfRvaAndSizes;
   std::array<ImageDataDirectory, NUMBEROF_DIRECTORY_ENTRIES> ImageDataDirectory;
 };
 
-static_assert(sizeof(ImageOptionalHeader32) == 244 &&
-              "Optional Header 32 Must be 244 bytes");
+static_assert(sizeof(ImageOptionalHeader32) == 244 && "Optional Header 32 Must be 244 bytes");
 
 #pragma pack(pop)
 
-using ImageOptionalHeader =
-    std::variant<ImageOptionalHeader32, ImageOptionalHeader64>;
+using ImageOptionalHeader = std::variant<ImageOptionalHeader32, ImageOptionalHeader64>;
 
-struct ImageNTHeaders {
+struct ImageNTHeaders
+{
   std::array<std::byte, 4> Signature = SIGNATURE;
-  ImageFileHeader FileHeader;
-  ImageOptionalHeader OptionalHeader;
+  ImageFileHeader          FileHeader;
+  ImageOptionalHeader      OptionalHeader;
+  // put machine type here so we don't have to do std::visit every time
+  // todo: can we remove varaint and instead have both 32 and 64 header and access
+  // it based on format
+  PEFormat Format{PEFormat::PE64};
 };
 
-static_assert(sizeof(ImageNTHeaders) == 272 &&
-              "ImageNTHeaders must be 272 bytes with padding");
+static_assert(sizeof(ImageNTHeaders) == 272 && "ImageNTHeaders must be 272 bytes with padding");
 
-enum class ImageSectionFlags : uint32_t {
+enum class ImageSectionFlags : uint32_t
+{
   // section should not be padded to next boundary
   ScnTypeNoPad = 0x00000008,
 
@@ -386,7 +395,8 @@ enum class ImageSectionFlags : uint32_t {
 
 };
 
-struct ImageSectionHeader {
+struct ImageSectionHeader
+{
   // An 8-byte, null-padded UTF-8 encoded string, if the string is exactly 8
   // characters long, then there is no null terminator
   std::array<char, 8> Name;
@@ -421,10 +431,10 @@ struct ImageSectionHeader {
   ImageSectionFlags Characteristics;
 };
 
-static_assert(sizeof(ImageSectionHeader) == 40 &&
-              "Section header must be 40 bytes");
+static_assert(sizeof(ImageSectionHeader) == 40 && "Section header must be 40 bytes");
 
-struct ImageImportDescriptor {
+struct ImageImportDescriptor
+{
   // RVA of Import Lookup Table (ILT/INT)
   // contains name or ordinal for each import.
   uint32_t OriginalFirstThunk;
@@ -443,7 +453,8 @@ struct ImageImportDescriptor {
 
 static_assert(sizeof(ImageImportDescriptor) == 20);
 
-struct ImageSection {
+struct ImageSection
+{
   ImageSectionHeader Header;
 
   // Header.PointerToRawData..Header.SizeOfRawData raw bytes belonging to this
@@ -451,35 +462,38 @@ struct ImageSection {
   std::span<const std::byte> Data;
 };
 
-struct Import {
-  ImageImportDescriptor Descriptor;
-  std::string_view DLLName{};
+struct Import
+{
+  ImageImportDescriptor         Descriptor;
+  std::string_view              DLLName{};
   std::vector<std::string_view> Names{};
 };
 
-struct PEImage {
-  ImageDosHeader DosHeader;
-  ImageNTHeaders NTHeaders;
+struct PEImage
+{
+  ImageDosHeader            DosHeader;
+  ImageNTHeaders            NTHeaders;
   std::vector<ImageSection> SectionHeaders;
-  std::vector<Import> Imports;
+  std::vector<Import>       Imports;
 };
 
 // =================utilities===============================
 
-constexpr std::optional<uint32_t> RvaToFileOffset(
-    uint32_t Rva, const ImageSectionHeader& Section) noexcept {
-  if (Rva >= Section.VirtualAddress &&
-      Rva < Section.VirtualAddress + Section.SizeOfRawData) {
-    return std::uint32_t{Rva - Section.VirtualAddress +
-                         Section.PointerToRawData};
+constexpr std::optional<uint32_t> RvaToFileOffset(uint32_t Rva, const ImageSectionHeader& Section) noexcept
+{
+  if(Rva >= Section.VirtualAddress && Rva < Section.VirtualAddress + Section.SizeOfRawData)
+  {
+    return std::uint32_t{Rva - Section.VirtualAddress + Section.PointerToRawData};
   }
 
   return std::nullopt;
 }
 
 // todo: put somewhere else
-constexpr std::string_view MachineToStringView(MachineType Type) noexcept {
-  switch (Type) {
+constexpr std::string_view MachineToStringView(MachineType Type) noexcept
+{
+  switch(Type)
+  {
     case MachineType::MACHINE_UNKNOWN:
       return "Unknown";
     case MachineType::MACHINE_ALPHA:
@@ -508,8 +522,10 @@ constexpr std::string_view MachineToStringView(MachineType Type) noexcept {
   }
 }
 
-constexpr std::string_view PEFormatToStringView(PEFormat Format) noexcept {
-  switch (Format) {
+constexpr std::string_view PEFormatToStringView(PEFormat Format) noexcept
+{
+  switch(Format)
+  {
     case PEFormat::PE32:
       return "PE32";
     case PEFormat::PE64:
@@ -520,9 +536,10 @@ constexpr std::string_view PEFormatToStringView(PEFormat Format) noexcept {
   };
 }
 
-constexpr std::string_view CharacteristicsToStringView(
-    FileCharacteristics Flag) noexcept {
-  switch (Flag) {
+constexpr std::string_view CharacteristicsToStringView(FileCharacteristics Flag) noexcept
+{
+  switch(Flag)
+  {
     case FileCharacteristics::RelocsStripped:
       return "IMAGE_FILE_RELOCS_STRIPPED";
     case FileCharacteristics::ExecutableImage:
@@ -558,7 +575,8 @@ constexpr std::string_view CharacteristicsToStringView(
   return "UNKNOWN";
 }
 
-inline std::string CharacteristicsToString(std::uint16_t Characteristics) {
+inline std::string CharacteristicsToString(std::uint16_t Characteristics)
+{
   std::string Result;
 
   constexpr std::array Flags{
@@ -579,12 +597,15 @@ inline std::string CharacteristicsToString(std::uint16_t Characteristics) {
       FileCharacteristics::BytesReversedHi,
   };
 
-  for (const auto Flag : Flags) {
+  for(const auto Flag : Flags)
+  {
     const uint16_t Value = static_cast<uint16_t>(Flag);
 
-    if ((Characteristics & Value) == 0) continue;
+    if((Characteristics & Value) == 0)
+      continue;
 
-    if (!Result.empty()) Result += " | ";
+    if(!Result.empty())
+      Result += " | ";
 
     Result += CharacteristicsToStringView(Flag);
   }
@@ -592,13 +613,15 @@ inline std::string CharacteristicsToString(std::uint16_t Characteristics) {
   return Result;
 }
 
-constexpr bool HasFlag(uint16_t Value, FileCharacteristics Flag) noexcept {
+constexpr bool HasFlag(uint16_t Value, FileCharacteristics Flag) noexcept
+{
   return (Value & static_cast<uint16_t>(Flag)) != 0;
 }
 
-constexpr std::string_view ImageSubSystemToStringView(
-    ImageSubsystemType Type) noexcept {
-  switch (Type) {
+constexpr std::string_view ImageSubSystemToStringView(ImageSubsystemType Type) noexcept
+{
+  switch(Type)
+  {
     case ImageSubsystemType::Unknown:
       return "Unknown";
 
@@ -646,17 +669,20 @@ constexpr std::string_view ImageSubSystemToStringView(
   }
 }
 
-inline std::string ImageSectionFlagsToString(uint32_t Flags) {
+inline std::string ImageSectionFlagsToString(uint32_t Flags)
+{
   std::string Result;
 
   auto Append = [&](std::string_view Name) {
-    if (!Result.empty()) Result += " | ";
+    if(!Result.empty())
+      Result += " | ";
 
     Result += Name;
   };
 
-  constexpr struct {
-    uint32_t Value{};
+  constexpr struct
+  {
+    uint32_t         Value{};
     std::string_view Name{};
   } FlagsTable[] = {
       {0x00000008, "TYPE_NO_PAD"},
@@ -682,8 +708,10 @@ inline std::string ImageSectionFlagsToString(uint32_t Flags) {
       {0x80000000, "MEM_WRITE"},
   };
 
-  for (auto [Value, Name] : FlagsTable) {
-    if ((Flags & Value) == Value) Append(Name);
+  for(auto [Value, Name] : FlagsTable)
+  {
+    if((Flags & Value) == Value)
+      Append(Name);
   }
 
   return Result;
