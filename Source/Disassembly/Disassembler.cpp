@@ -54,6 +54,10 @@ void Disassembler::DoIt()
       // pass Bytes so that it can read disp{8,32} and slide it
       BuildModRMInstruction(ModRM, OpcodeMetadata, InstructionEncoding);
     }
+    else
+    {
+      build_immediate_instruction(OpcodeMetadata, InstructionEncoding);
+    }
   }
 }
 
@@ -389,4 +393,13 @@ void Disassembler::BuildModRMInstruction(const ModRM& ModRm, const InstructionDe
                Info.Mode == ModRMMode::Register ?
                    SourceRegister :
                    effective_address.render_sib(OperandSize::Bits64, false, Image->NTHeaders, ModRm));
+}
+
+void Disassembler::build_immediate_instruction(const InstructionDesc& metadata, std::span<const std::byte>& bytes)
+{
+  if(metadata.Destination == OperandCode::Iv || metadata.Destination == OperandCode::Iz || metadata.Source == OperandCode::Ib
+     || metadata.Source == OperandCode::Iv || metadata.Source == OperandCode::Iz || metadata.Source == OperandCode::Ib)
+  {
+    std::println("imm: {:x}", std::to_integer<uint8_t>(bytes[0]));
+  }
 }

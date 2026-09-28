@@ -173,6 +173,7 @@ private:
   ModRMOperandInfo ResolveModRM(const ModRM& ModRm, const InstructionDesc& MetaData);
   SIB              GetSibFromByte(std::uint8_t Byte, std::uint8_t mod);
   void BuildModRMInstruction(const ModRM& ModRm, const InstructionDesc& MetaData, std::span<const std::byte>& Bytes);
+  void build_immediate_instruction(const InstructionDesc& metadata, std::span<const std::byte>& bytes);
 
   PEImage* Image = nullptr;
 };
