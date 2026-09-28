@@ -56,7 +56,7 @@ struct SIB
   std::int8_t Index{-1};
   //The base field is used to specify the register containing the base address
   //portion of the indexed register - indirect effective address
-  std::uint8_t Base{};
+  std::int8_t Base{};
 
   constexpr std::uint8_t decode_scale() const noexcept
   {
@@ -74,7 +74,8 @@ struct EffectiveAddress
 
   bool is_sib() const noexcept { return sib.Base != -1 && sib.Index != -1 && sib.Scale != 0; }
 
-  [[msvc::forceinline]] std::string render_sib(OperandSize size, bool address_override_prefix, const ImageNTHeaders& nt_headers) const noexcept
+  // this does not belong here
+  std::string render_sib(OperandSize size, bool address_override_prefix, const ImageNTHeaders& nt_headers, const ModRM& modrm) const noexcept
   {
     // 67H(address_override_prefix) prefix can overwrite this
     // manual has defined like this:
@@ -87,12 +88,27 @@ struct EffectiveAddress
 
       if(!is_sib())
       {
-        if(displacement != 0)
-          displacement < 0 ? expression += std::format(" - 0x{:02x}", std::abs(displacement)) :
-                             expression += std::format(" + 0x{:02x}", displacement);
+        // this is special case
+        // in long mode mode this maps to [RIP + disp32]
+        // in compatibility mode it maps to disp32
+        if(modrm.Mod == 0 && modrm.Rm == 5)
+        {
+          // RIP-relative or disp32
+          if(nt_headers.FileHeader.Machine == MachineType::MACHINE_AMD64)
+            expression += std::format("RIP + 0x{:x}", displacement);
+          else
+            expression += std::format("0x{:x}", displacement);
+        }
+        else
+        {
+          // regular [reg] or [reg + disp]
+          expression += ToString(ResolveRegister(modrm.Rm, op_size));
+          if(displacement != 0)
+            displacement < 0 ? expression += std::format(" - 0x{:x}", std::abs(displacement)) :
+                               expression += std::format(" + 0x{:x}", displacement);
+        }
 
         expression += "]";
-
         return expression;
       }
 
@@ -112,8 +128,8 @@ struct EffectiveAddress
 
       if(displacement != 0)
       {
-        displacement < 0 ? expression += std::format(" - 0x{:02x}", std::abs(displacement)) :
-                           expression += std::format(" + 0x{:02x}", displacement);
+        displacement < 0 ? expression += std::format(" - 0x{:x}", std::abs(displacement)) :
+                           expression += std::format(" + 0x{:x}", displacement);
       }
 
       expression += "]";
@@ -155,7 +171,7 @@ private:
   OpcodeResult     OpcodeScanner(std::span<const std::byte>& Bytes);
   ModRM            ModRMScanner(const std::byte Byte);
   ModRMOperandInfo ResolveModRM(const ModRM& ModRm, const InstructionDesc& MetaData);
-  SIB              GetSibFromByte(std::uint8_t Byte);
+  SIB              GetSibFromByte(std::uint8_t Byte, std::uint8_t mod);
   void BuildModRMInstruction(const ModRM& ModRm, const InstructionDesc& MetaData, std::span<const std::byte>& Bytes);
 
   PEImage* Image = nullptr;
