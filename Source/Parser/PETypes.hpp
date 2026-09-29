@@ -479,7 +479,7 @@ struct PEImage
 
 // =================utilities===============================
 
-constexpr std::optional<uint32_t> RvaToFileOffset(uint32_t Rva, const ImageSectionHeader& Section) noexcept
+constexpr std::optional<uint32_t> rva_to_file_offset(uint32_t Rva, const ImageSectionHeader& Section) noexcept
 {
   if(Rva >= Section.VirtualAddress && Rva < Section.VirtualAddress + Section.SizeOfRawData)
   {

@@ -12,7 +12,7 @@
 #include "x86-64/Registers.hpp"
 #include "x86-64/Types.hpp"
 
-void Disassembler::do_it()
+void Disassembler::disassemble() noexcept
 {
   constexpr std::array text_section_name{'.', 't', 'e', 'x', 't', '\0', '\0', '\0'};
 
@@ -26,36 +26,32 @@ void Disassembler::do_it()
     return;
   }
 
-  ImageSection& text_section = *it;
+  ImageSection&              text_section = *it;
+  std::span<const std::byte> text_bytes   = text_section.Data;
 
-  std::span<const std::byte> instruction_encoding = text_section.Data;
-
-  //std::span<const std::byte> instruction_encoding = test_bytes_span;
-
-  while(!instruction_encoding.empty())
+  while(!text_bytes.empty())
   {
-    prefix_scanner(instruction_encoding);
-    OpcodeResult opcode = opcode_scanner(instruction_encoding);
+    scan_prefixes(text_bytes);
+    OpcodeResult opcode = scan_opcode(text_bytes);
 
     InstructionDesc opcode_metadata = OPCODE_TABLE[std::to_integer<std::uint8_t>(opcode.bytes[0])];
 
     if(opcode_metadata.mod_rm)
     {
-      const std::byte mod_rm_byte = instruction_encoding[0];
+      const std::byte mod_rm_byte = text_bytes[0];
+      ModRM           mod_rm      = scan_mod_rm(mod_rm_byte);
+      text_bytes                  = text_bytes.subspan(1);
 
-      ModRM mod_rm         = mod_rm_scanner(mod_rm_byte);
-      instruction_encoding = instruction_encoding.subspan(1);
-
-      build_mod_rm_instruction(mod_rm, opcode_metadata, instruction_encoding);
+      build_mod_rm_instruction(mod_rm, opcode_metadata, text_bytes);
     }
     else
     {
-      build_immediate_instruction(opcode_metadata, instruction_encoding);
+      build_immediate_instruction(opcode_metadata, text_bytes);
     }
   }
 }
 
-void Disassembler::prefix_scanner(std::span<const std::byte>& bytes)
+void Disassembler::scan_prefixes(std::span<const std::byte>& bytes)
 {
   auto prefix_bytes = bytes.first(std::min<std::size_t>(5, bytes.size()));
 
@@ -83,7 +79,7 @@ void Disassembler::prefix_scanner(std::span<const std::byte>& bytes)
   bytes = bytes.subspan(prefix_count);
 }
 
-OpcodeResult Disassembler::opcode_scanner(std::span<const std::byte>& bytes)
+OpcodeResult Disassembler::scan_opcode(std::span<const std::byte>& bytes)
 {
   assert(!bytes.empty());
 
@@ -120,7 +116,7 @@ OpcodeResult Disassembler::opcode_scanner(std::span<const std::byte>& bytes)
   return OpcodeResult{.bytes = {opcodes[0], opcodes[1], std::byte{0x0}}, .length = 2};
 }
 
-ModRM Disassembler::mod_rm_scanner(const std::byte byte)
+ModRM Disassembler::scan_mod_rm(const std::byte byte)
 {
   /*
     example: 11 001 100
@@ -189,7 +185,7 @@ ModRMOperandInfo Disassembler::resolve_mod_rm(const ModRM& mod_rm, const Instruc
   return info;
 }
 
-SIB Disassembler::get_sib_from_byte(std::uint8_t byte, std::uint8_t mod)
+SIB Disassembler::decode_sib(std::uint8_t byte, std::uint8_t mod)
 {
   return SIB{
       .scale = static_cast<std::int8_t>((byte >> 6) & 0x03),
@@ -216,7 +212,7 @@ void Disassembler::build_mod_rm_instruction(const ModRM& mod_rm, const Instructi
 
       bytes = bytes.subspan(sizeof(sib_byte));
 
-      effective_address.sib = get_sib_from_byte(sib_byte, mod_rm.mod);
+      effective_address.sib = decode_sib(sib_byte, mod_rm.mod);
     }
 
     if(info.mode == ModRMMode::MemoryDisp8)

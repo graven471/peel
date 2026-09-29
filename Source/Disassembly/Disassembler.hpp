@@ -80,7 +80,7 @@ struct EffectiveAddress
   // this does not belong here
   std::string render_sib(OperandSize size, bool address_override_prefix, const ImageNTHeaders& nt_headers, const ModRM& mod_rm) const noexcept
   {
-    auto build_instruction = [&](OperandSize op_size) -> std::string {
+    auto decode_effective_address = [&](OperandSize op_size) -> std::string {
       std::string expression = "[";
 
       if(!is_sib())
@@ -144,7 +144,7 @@ struct EffectiveAddress
       // then we should use 32-bit as address-size
 
       //[base + index*scale + disp]
-      return build_instruction(address_override_prefix ? OperandSize::Bits32 : OperandSize::Bits64);
+      return decode_effective_address(address_override_prefix ? OperandSize::Bits32 : OperandSize::Bits64);
     }
 
     // generic case like protected mode (compatibility mode) etc
@@ -154,7 +154,7 @@ struct EffectiveAddress
     //
     //}
 
-    return build_instruction(address_override_prefix ? OperandSize::Bits16 : OperandSize::Bits32);
+    return decode_effective_address(address_override_prefix ? OperandSize::Bits16 : OperandSize::Bits32);
   }
 };
 
@@ -164,14 +164,14 @@ public:
   explicit Disassembler(PEImage* image)
       : image(image) {};
 
-  void do_it();
+  void disassemble() noexcept;
 
 private:
-  void             prefix_scanner(std::span<const std::byte>& bytes);
-  OpcodeResult     opcode_scanner(std::span<const std::byte>& bytes);
-  ModRM            mod_rm_scanner(const std::byte byte);
+  void             scan_prefixes(std::span<const std::byte>& bytes);
+  OpcodeResult     scan_opcode(std::span<const std::byte>& bytes);
+  ModRM            scan_mod_rm(const std::byte byte);
   ModRMOperandInfo resolve_mod_rm(const ModRM& mod_rm, const InstructionDesc& metadata);
-  SIB              get_sib_from_byte(std::uint8_t byte, std::uint8_t mod);
+  SIB              decode_sib(std::uint8_t byte, std::uint8_t mod);
 
   void build_mod_rm_instruction(const ModRM& mod_rm, const InstructionDesc& metadata, std::span<const std::byte>& bytes);
   void build_immediate_instruction(const InstructionDesc& metadata, std::span<const std::byte>& bytes);

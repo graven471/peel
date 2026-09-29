@@ -6,26 +6,22 @@
 #include "Core/Error.hpp"
 #include "PETypes.hpp"
 
-class PEParser {
- public:
-  explicit PEParser(std::span<const std::byte> InMappedBytes)
-      : MappedBytes(InMappedBytes) {};
+class PEParser
+{
+public:
+  explicit PEParser(std::span<const std::byte> mapped_bytes)
+      : mapped_bytes(mapped_bytes) {};
 
-  [[nodiscard]] PeelResult<PEImage> Parse();
+  [[nodiscard]] PeelResult<PEImage> parse();
 
- private:
-  PeelResult<ImageDosHeader> ParseDosHeader(
-      std::span<const std::byte> InDosHeader);
-  PeelResult<ImageFileHeader> ParseFileHeader(
-      std::span<const std::byte> InImageHeader);
-  PeelResult<ImageOptionalHeader> ParseOptionalHeader(
-      std::span<const std::byte> InOptionalHeader);
+private:
+  PeelResult<ImageDosHeader>  parse_dos_header(std::span<const std::byte> dos_header);
+  PeelResult<ImageFileHeader> parse_file_header(std::span<const std::byte> image_header);
 
-  PeelResult<std::vector<ImageSection>> ParseSectionHeader(
-      std::span<const std::byte> InSectionHeader, uint32_t TotalSections);
+  PeelResult<ImageOptionalHeader> parse_optional_header(std::span<const std::byte> optional_header);
+  PeelResult<std::vector<ImageSection>> parse_section_headers(std::span<const std::byte> section_header, std::uint32_t section_count);
 
-  std::vector<Import> ParseImportSection(std::span<const ImageSection> Sections,
-                                         ImageOptionalHeader& OptionalHeader);
+  std::vector<Import> parse_imports(std::span<const ImageSection> sections, ImageOptionalHeader& optional_header);
 
-  std::span<const std::byte> MappedBytes{};
+  std::span<const std::byte> mapped_bytes{};
 };

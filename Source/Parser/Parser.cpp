@@ -6,138 +6,108 @@
 
 #include "PETypes.hpp"
 
-/*
-the format is defined like this:
-
-IMAGE_DOS_HEADER: start: 0 end: 64
-important thing there is MAGIC ("MZ") and LfaNew at offset 60 (0x3C) in
-DosHeader
-// this LfaNew tells us where to find signature (offset) "PE\0\0" for every
-valid PE file there exists a signature
-// "PE\0\0"
-
-DOS_STUB
-// then there is a DOS_STUB which is a char(s) that says "This program cannot be
-run in DOS mode"
-
-// SIGNATURE: size: 4 bytes
-// "PE\0\0"
-
-// FileHeader: start: LfaNew + SIGNATURE_SIZE end: (LfaNew +
-SIGNATURE_SIZE)..FILE_HEADER_SIZE (20)
-// this header stores machine type, num of sections, num of symbols, size of
-optional header and Characteristics
-// which contains flags that indicates attribute of the image or object file
-e.g. (dll, executable etc)
-
-// Optional Header: start: DosHeader::LfaNew + SIGNATURE.size() + FileHeader
-size end: FileHeader::SizeOfOptionalHeader
-// it is required image files and can be optional for object files
-// MAGIC -> 0x10b = PE32 (x86)
-// MAGIC -> 0x20b = PE32+ (AMD64) can use 64 bit address space and limiting
-image size to 2 GB
-// SizeOfCode -> size of .text section
-// SizeOfData -> size of .data section
-*/
-
-// return void for now later return a struct that represent full parsed valid PE
-// file data so that i can feed to GUI or CLI or dumb etc
-[[nodiscard]] PeelResult<PEImage> PEParser::Parse()
+[[nodiscard]] PeelResult<PEImage> PEParser::parse()
 {
-  PeelResult<ImageDosHeader> DosHeader = ParseDosHeader(MappedBytes.subspan(0, sizeof(ImageDosHeader)));
+  PeelResult<ImageDosHeader> dos_header = parse_dos_header(mapped_bytes.subspan(0, sizeof(ImageDosHeader)));
 
-  if(!DosHeader)
-    return std::unexpected(DosHeader.error());
+  if(!dos_header)
+    return std::unexpected(dos_header.error());
 
   // [PE_SIGNATURE | FileHeader (20 bytes) | OptionalHeader]
-  PeelResult<ImageFileHeader> FileHeader =
-      ParseFileHeader(MappedBytes.subspan(DosHeader->LfaNew, sizeof(ImageFileHeader) + SIGNATURE.size()));
+  PeelResult<ImageFileHeader> file_header =
+      parse_file_header(mapped_bytes.subspan(dos_header->LfaNew, sizeof(ImageFileHeader) + SIGNATURE.size()));
 
-  if(!FileHeader)
-    return std::unexpected(FileHeader.error());
+  if(!file_header)
+    return std::unexpected(file_header.error());
 
   // every image file has an optional header header that provides info to
   // loader. this header is optional in object files, for image files this
   // header is required it's size is not fixed FileHeader::SizeOfOptionalHeader
   // must be used to validate
-  const std::size_t OptionalHeaderOffset = DosHeader->LfaNew + SIGNATURE.size() + sizeof(::ImageFileHeader);
+  const std::size_t optional_header_offset = dos_header->LfaNew + SIGNATURE.size() + sizeof(::ImageFileHeader);
 
-  PeelResult<ImageOptionalHeader> OptionalHeader =
-      ParseOptionalHeader(MappedBytes.subspan(OptionalHeaderOffset, FileHeader->SizeOfOptionalHeader));
+  PeelResult<ImageOptionalHeader> optional_header =
+      parse_optional_header(mapped_bytes.subspan(optional_header_offset, file_header->SizeOfOptionalHeader));
 
-  if(!OptionalHeader)
-    return std::unexpected(OptionalHeader.error());
+  if(!optional_header)
+    return std::unexpected(optional_header.error());
 
-  std::println("Machine: \t {}", MachineToStringView(FileHeader->Machine));
+  std::println("Machine: \t {}", MachineToStringView(file_header->Machine));
 
-  ImageNTHeaders NTHeaders{
-      .FileHeader     = *FileHeader,
-      .OptionalHeader = *OptionalHeader,
+  ImageNTHeaders nt_headers{
+      .FileHeader     = *file_header,
+      .OptionalHeader = *optional_header,
   };
 
   // todo: i don't like this
-  std::visit([&](auto&& header) { NTHeaders.Format = header.Format; }, NTHeaders.OptionalHeader);
+  std::visit([&](auto&& header) { nt_headers.Format = header.Format; }, nt_headers.OptionalHeader);
 
-  const std::size_t SectionHeaderOffset =
-      DosHeader->LfaNew + sizeof(SIGNATURE) + sizeof(ImageFileHeader) + FileHeader->SizeOfOptionalHeader;
+  const std::size_t section_header_offset =
+      dos_header->LfaNew + sizeof(SIGNATURE) + sizeof(ImageFileHeader) + file_header->SizeOfOptionalHeader;
 
-  PeelResult<std::vector<ImageSection>> Sections =
-      ParseSectionHeader(MappedBytes.subspan(SectionHeaderOffset, FileHeader->NumberOfSections * sizeof(ImageSectionHeader)),
-                         FileHeader->NumberOfSections);
+  PeelResult<std::vector<ImageSection>> sections =
+      parse_section_headers(mapped_bytes.subspan(section_header_offset, file_header->NumberOfSections * sizeof(ImageSectionHeader)),
+                            file_header->NumberOfSections);
 
-  if(!Sections)
-    return std::unexpected(Sections.error());
+  if(!sections)
+    return std::unexpected(sections.error());
 
-  std::vector<Import> Imports = ParseImportSection(*Sections, NTHeaders.OptionalHeader);
+  std::vector<Import> imports = parse_imports(*sections, nt_headers.OptionalHeader);
 
-  return PEImage{.DosHeader = *DosHeader, .NTHeaders = NTHeaders, .SectionHeaders = std::move(*Sections), .Imports = std::move(Imports)};
+  return PEImage{.DosHeader = *dos_header, .NTHeaders = nt_headers, .SectionHeaders = std::move(*sections), .Imports = std::move(imports)};
 }
 
-PeelResult<ImageDosHeader> PEParser::ParseDosHeader(std::span<const std::byte> InDosHeader)
+PeelResult<ImageDosHeader> PEParser::parse_dos_header(std::span<const std::byte> dos_header)
 {
-  ImageDosHeader Header{};
-  std::memcpy(&Header, InDosHeader.data(), sizeof(ImageDosHeader));
+  ImageDosHeader header{};
 
-  if(Header.Magic != PE_MAGIC)
+  std::memcpy(&header, dos_header.data(), sizeof(ImageDosHeader));
+
+  if(header.Magic != PE_MAGIC)
   {
     return std::unexpected(PeelError{PeelErrorCode::PEEL_INVALID_MAGIC});
   }
 
-  return Header;
+  return header;
 }
 
-PeelResult<ImageFileHeader> PEParser::ParseFileHeader(std::span<const std::byte> InImageHeader)
+PeelResult<ImageFileHeader> PEParser::parse_file_header(std::span<const std::byte> image_header)
 {
-  if(!std::ranges::equal(SIGNATURE, InImageHeader.subspan(0, SIGNATURE.size())))
+  if(!std::ranges::equal(SIGNATURE, image_header.subspan(0, SIGNATURE.size())))
   {
     return std::unexpected(PeelError{PeelErrorCode::PEEL_INVALID_SIGNATURE});
   }
 
-  ImageFileHeader Header{};
-  // skip 4 bytes of signature
-  std::memcpy(&Header, InImageHeader.data() + SIGNATURE.size(), sizeof(ImageFileHeader));
+  ImageFileHeader header{};
 
-  return Header;
+  // skip 4 bytes of signature
+  std::memcpy(&header, image_header.data() + SIGNATURE.size(), sizeof(ImageFileHeader));
+
+  return header;
 }
 
-PeelResult<ImageOptionalHeader> PEParser::ParseOptionalHeader(std::span<const std::byte> InOptionalHeader)
+PeelResult<ImageOptionalHeader> PEParser::parse_optional_header(std::span<const std::byte> optional_header)
 {
-  uint16_t Magic{0};
+  uint16_t magic{0};
 
-  std::memcpy(&Magic, InOptionalHeader.subspan(0, sizeof(uint16_t)).data(), sizeof(uint16_t));
+  std::memcpy(&magic, optional_header.subspan(0, sizeof(uint16_t)).data(), sizeof(uint16_t));
 
-  switch(static_cast<PEFormat>(Magic))
+  switch(static_cast<PEFormat>(magic))
   {
     case PEFormat::PE32: {
-      ImageOptionalHeader32 Header{};
-      std::memcpy(&Header, InOptionalHeader.data(), sizeof(ImageOptionalHeader32));
-      return ImageOptionalHeader{Header};
+      ImageOptionalHeader32 header{};
+
+      std::memcpy(&header, optional_header.data(), sizeof(ImageOptionalHeader32));
+
+      return ImageOptionalHeader{header};
     }
 
     case PEFormat::PE64: {
-      ImageOptionalHeader64 Header{};
-      std::memcpy(&Header, InOptionalHeader.data(), sizeof(ImageOptionalHeader64));
-      return ImageOptionalHeader{Header};
+      ImageOptionalHeader64 header{};
+
+      std::memcpy(&header, optional_header.data(), sizeof(ImageOptionalHeader64));
+
+      return ImageOptionalHeader{header};
     }
 
     default:
@@ -145,140 +115,125 @@ PeelResult<ImageOptionalHeader> PEParser::ParseOptionalHeader(std::span<const st
   }
 }
 
-PeelResult<std::vector<ImageSection>> PEParser::ParseSectionHeader(std::span<const std::byte> InSectionHeader, uint32_t TotalSections)
+PeelResult<std::vector<ImageSection>> PEParser::parse_section_headers(std::span<const std::byte> in_section_header,
+                                                                      std::uint32_t              section_count)
 {
-  std::vector<ImageSection> Sections(TotalSections);
+  std::vector<ImageSection> sections(section_count);
 
   // TODO: handle this in better way
-  for(std::size_t Index = 0; Index < TotalSections; Index++)
+  for(std::size_t index = 0; index < section_count; index++)
   {
-    std::memcpy(&Sections[Index].Header, InSectionHeader.data() + Index * sizeof(ImageSectionHeader), sizeof(ImageSectionHeader));
+    std::memcpy(&sections[index].Header, in_section_header.data() + index * sizeof(ImageSectionHeader), sizeof(ImageSectionHeader));
 
-    const uint32_t Offset = Sections[Index].Header.PointerToRawData;
-    const uint32_t Size   = Sections[Index].Header.SizeOfRawData;
+    const uint32_t raw_data_offset = sections[index].Header.PointerToRawData;
+    const uint32_t raw_data_size   = sections[index].Header.SizeOfRawData;
 
-    if(Offset > MappedBytes.size() || Size > MappedBytes.size() - Offset) [[unlikely]]
-    {
+    if(raw_data_offset > mapped_bytes.size() || raw_data_size > mapped_bytes.size() - raw_data_offset) [[unlikely]]
       return std::unexpected(PeelError{PeelErrorCode::PEEL_INVALID_SECTION});
-    }
 
-    // view of bytes on disk
-    Sections[Index].Data = MappedBytes.subspan(Offset, Size);
-
-    // debug
-    std::println("Name: \t {}{}{}{}{}{}{}{}", Sections[Index].Header.Name[0], Sections[Index].Header.Name[1],
-                 Sections[Index].Header.Name[2], Sections[Index].Header.Name[3], Sections[Index].Header.Name[4],
-                 Sections[Index].Header.Name[5], Sections[Index].Header.Name[6], Sections[Index].Header.Name[7]);
-
-    std::println("Addr: \t 0x{:02X}", Sections[Index].Header.VirtualAddress);
-
-    std::println("Flag: \t {}", ImageSectionFlagsToString((uint32_t)Sections[Index].Header.Characteristics));
+    sections[index].Data = mapped_bytes.subspan(raw_data_offset, raw_data_size);
   }
 
-  return Sections;
+  return sections;
 }
 
 // TODO: not a fastest or solid implementation comeback and improve it
-std::vector<Import> PEParser::ParseImportSection(std::span<const ImageSection> Sections, ImageOptionalHeader& OptionalHeader)
+std::vector<Import> PEParser::parse_imports(std::span<const ImageSection> sections, ImageOptionalHeader& optional_header)
 {
-  auto ParseFunctionNames = [&](uint32_t ImportLookupTableOffset, const ImageSectionHeader& SectionHeader,
-                                std::vector<std::string_view>& Names) {
-    for(std::size_t Index = 0;; Index++)
+  auto parse_import_names = [&](std::uint32_t import_lookup_table_offset, const ImageSectionHeader& section_header,
+                                std::vector<std::string_view>& names) {
+    for(std::size_t index = 0;; index++)
     {
-      // ILT entry -> IMAGE_IMPORT_BY_NAME (hint, name)
-
       // todo: handle PE32 in that case this is uint32_t
-      uint64_t Entry;
+      std::uint64_t import_lookup_entry;
 
-      std::memcpy(&Entry, MappedBytes.data() + ImportLookupTableOffset + Index * sizeof(uint64_t), sizeof(Entry));
+      std::memcpy(&import_lookup_entry, mapped_bytes.data() + import_lookup_table_offset + index * sizeof(uint64_t),
+                  sizeof(import_lookup_entry));
 
       // last entry is Null
-      if(Entry == 0)
+      if(import_lookup_entry == 0)
         break;
 
-      std::optional<uint32_t> ImportByNameOffset = RvaToFileOffset(static_cast<uint32_t>(Entry), SectionHeader);
+      std::optional<std::uint32_t> import_by_name_offset =
+          rva_to_file_offset(static_cast<uint32_t>(import_lookup_entry), section_header);
 
-      if(!ImportByNameOffset) [[unlikely]]
+      if(!import_by_name_offset) [[unlikely]]
         continue;
 
-      auto ImportByName = MappedBytes.subspan(*ImportByNameOffset);
+      auto import_by_name = mapped_bytes.subspan(*import_by_name_offset);
+      auto name_bytes     = import_by_name.subspan(2);
 
-      // skip hint first 2 bytes
-      auto NameBytes = ImportByName.subspan(2);
+      auto it = std::ranges::find(name_bytes, std::byte{0});
 
-      auto It = std::ranges::find(NameBytes, std::byte{0});
-
-      // bad Image no null terminator
-      if(It == NameBytes.end()) [[unlikely]]
+      if(it == name_bytes.end()) [[unlikely]]
         break;
 
-      auto NameLength = std::distance(NameBytes.begin(), It);
+      auto name_length = std::distance(name_bytes.begin(), it);
 
-      Names.emplace_back(reinterpret_cast<const char*>(NameBytes.data()), static_cast<std::size_t>(NameLength));
+      names.emplace_back(reinterpret_cast<const char*>(name_bytes.data()), static_cast<std::size_t>(name_length));
     }
   };
 
   return std::visit(
-      [&](auto&& Header) -> std::vector<Import> {
-        ImageDataDirectory& ImportDir = Header.ImageDataDirectory[(uint8_t)DataDirectoryIndex::Import];
+      [&](auto&& header) -> std::vector<Import> {
+        ImageDataDirectory& import_dir = header.ImageDataDirectory[(uint8_t)DataDirectoryIndex::Import];
 
-        std::size_t DescriptorCount = ImportDir.Size / sizeof(ImageImportDescriptor);
+        std::size_t descriptor_count = import_dir.Size / sizeof(ImageImportDescriptor);
 
-        std::vector<Import> Imports;
-        Imports.resize(DescriptorCount);
+        std::vector<Import> imports;
+        imports.resize(descriptor_count);
 
-        if(ImportDir.VirtualAddress == 0 && ImportDir.Size == 0) [[unlikely]]
+        if(import_dir.VirtualAddress == 0 && import_dir.Size == 0) [[unlikely]]
           return {};
 
-        for(const auto& Section : Sections)
+        for(const auto& section : sections)
         {
-          std::optional<uint32_t> FileOffset = RvaToFileOffset(ImportDir.VirtualAddress, Section.Header);
+          std::optional<uint32_t> file_offset = rva_to_file_offset(import_dir.VirtualAddress, section.Header);
 
-          if(!FileOffset)
+          if(!file_offset)
             continue;
 
-          std::span<const std::byte> ImportData = MappedBytes.subspan(*FileOffset, ImportDir.Size);
+          std::span<const std::byte> import_data = mapped_bytes.subspan(*file_offset, import_dir.Size);
 
-          for(std::size_t Index = 0; Index < DescriptorCount; ++Index)
+          for(std::size_t index = 0; index < descriptor_count; ++index)
           {
-            std::memcpy(&Imports[Index].Descriptor, ImportData.data() + Index * sizeof(ImageImportDescriptor),
+            std::memcpy(&imports[index].Descriptor, import_data.data() + index * sizeof(ImageImportDescriptor),
                         sizeof(ImageImportDescriptor));
 
-            auto DLLNameOffset = RvaToFileOffset(Imports[Index].Descriptor.Name, Section.Header);
+            auto dll_name_offset = rva_to_file_offset(imports[index].Descriptor.Name, section.Header);
 
-            if(!DLLNameOffset)
+            if(!dll_name_offset)
               continue;
 
-            auto DLLNameBytes = MappedBytes.subspan(*DLLNameOffset);
+            auto dll_name_bytes = mapped_bytes.subspan(*dll_name_offset);
 
-            auto It = std::ranges::find(DLLNameBytes, std::byte{0});
+            auto it = std::ranges::find(dll_name_bytes, std::byte{0});
 
             // bad Image no null terminator
-            if(It == DLLNameBytes.end()) [[unlikely]]
+            if(it == dll_name_bytes.end()) [[unlikely]]
               break;
 
-            auto DLLNameLength = std::distance(DLLNameBytes.begin(), It);
+            auto dll_name_length = std::distance(dll_name_bytes.begin(), it);
 
-            Imports[Index].DLLName =
-                std::string_view{reinterpret_cast<const char*>(DLLNameBytes.data()), static_cast<std::size_t>(DLLNameLength)};
+            imports[index].DLLName = std::string_view{reinterpret_cast<const char*>(dll_name_bytes.data()),
+                                                      static_cast<std::size_t>(dll_name_length)};
 
-            std::optional<uint32_t> ImportLookupTableOffset =
-                RvaToFileOffset(Imports[Index].Descriptor.OriginalFirstThunk, Section.Header);
+            std::optional<uint32_t> import_lookup_table_offset =
+                rva_to_file_offset(imports[index].Descriptor.OriginalFirstThunk, section.Header);
 
-            if(!ImportLookupTableOffset)
+            if(!import_lookup_table_offset)
               continue;
 
-            ParseFunctionNames(*ImportLookupTableOffset, Section.Header, Imports[Index].Names);
+            parse_import_names(*import_lookup_table_offset, section.Header, imports[index].Names);
 
-            if(Imports[Index].Descriptor.OriginalFirstThunk == 0 && Imports[Index].Descriptor.TimeDateStamp == 0
-               && Imports[Index].Descriptor.ForwardChain == 0 && Imports[Index].Descriptor.Name == 0
-               && Imports[Index].Descriptor.FirstThunk == 0)
+            if(imports[index].Descriptor.OriginalFirstThunk == 0 && imports[index].Descriptor.TimeDateStamp == 0
+               && imports[index].Descriptor.ForwardChain == 0 && imports[index].Descriptor.Name == 0
+               && imports[index].Descriptor.FirstThunk == 0)
               break;
           }
         }
 
-        return Imports;
+        return imports;
       },
-
-      OptionalHeader);
+      optional_header);
 }

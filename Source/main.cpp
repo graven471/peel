@@ -24,7 +24,6 @@
 
 [[nodiscard]] static PeelResult<std::span<const std::byte>> map_file(const std::string& file_name)
 {
-  // use A prefix for now
   HANDLE file_handle = CreateFileA(file_name.c_str(), GENERIC_READ, NULL, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_READONLY, NULL);
 
   if(file_handle == INVALID_HANDLE_VALUE)
@@ -32,7 +31,6 @@
     return std::unexpected(MakeWin32Error(::GetLastError()));
   }
 
-  // get the file size
   LARGE_INTEGER file_size;
 
   if(GetFileSizeEx(file_handle, &file_size) == 0)
@@ -40,7 +38,6 @@
     return std::unexpected(MakeWin32Error(::GetLastError()));
   }
 
-  // create file mapping aka describing backing store
   HANDLE file_mapping = CreateFileMapping(file_handle, NULL, PAGE_READONLY, 0, 0, NULL);
 
   if(file_mapping == NULL)
@@ -49,18 +46,16 @@
     return std::unexpected(MakeWin32Error(::GetLastError()));
   }
 
-  // CreateFileMapping keeps the mapping alive internally
   CloseHandle(file_handle);
 
-  // map the file contents into this process virtual address space
-  LPVOID base_ptr = MapViewOfFile(file_mapping, FILE_MAP_READ, 0, 0, 0);
+  LPVOID base_address = MapViewOfFile(file_mapping, FILE_MAP_READ, 0, 0, 0);
 
-  if(base_ptr == NULL)
+  if(base_address == NULL) [[unlikely]]
   {
     return std::unexpected(MakeWin32Error(::GetLastError()));
   }
 
-  return std::span<const std::byte>{static_cast<const std::byte*>(base_ptr), static_cast<std::size_t>(file_size.QuadPart)};
+  return std::span<const std::byte>{static_cast<const std::byte*>(base_address), static_cast<std::size_t>(file_size.QuadPart)};
 }
 
 int main(int argc, const char* argv[])
@@ -83,18 +78,18 @@ int main(int argc, const char* argv[])
 
   std::string file_name = "C:\\Windows\\System32\\MRT.exe";
 
-  PeelResult<std::span<const std::byte>> mapping = map_file(file_name);
+  PeelResult<std::span<const std::byte>> mapped_file = map_file(file_name);
 
-  if(!mapping)
+  if(!mapped_file)
   {
-    std::println(stderr, "\033[31mError: \033[0m {}", mapping.error().ToString());
+    std::println(stderr, "\033[31mError: \033[0m {}", mapped_file.error().ToString());
 
     return EXIT_FAILURE;
   }
 
-  PEParser parser{*mapping};
+  PEParser parser{*mapped_file};
 
-  PeelResult<PEImage> image = parser.Parse();
+  auto image = parser.parse();
 
   if(!image)
   {
@@ -107,7 +102,7 @@ int main(int argc, const char* argv[])
 
   //for(std::size_t i = 0; i < 10'000; ++i)
   //{
-  disassembler.do_it();
+  disassembler.disassemble();
   //}
 
   return EXIT_SUCCESS;
