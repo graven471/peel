@@ -88,7 +88,12 @@ enum class Register : std::uint8_t
       count
 };
 
-static constexpr std::array<std::string_view, static_cast<std::size_t>(Register::count)> register_strings{
+constexpr auto register_index(Register reg) noexcept
+{
+  return std::to_underlying(reg);
+}
+
+static constexpr std::array<std::string_view, std::to_underlying(Register::count)> register_strings{
 #define X(name, string) string,
     REGISTER_LIST(X)
 #undef X
@@ -96,8 +101,8 @@ static constexpr std::array<std::string_view, static_cast<std::size_t>(Register:
 
 constexpr std::string_view to_string(Register reg) noexcept
 {
-  assert(static_cast<std::uint8_t>(reg) < static_cast<std::uint8_t>(Register::count) && "out of bound register access");
-  return register_strings[static_cast<std::uint8_t>(reg)];
+  assert(std::to_underlying(reg) < std::to_underlying(Register::count) && "out of bound register access");
+  return register_strings[std::to_underlying(reg)];
 }
 
 struct GpRegisters

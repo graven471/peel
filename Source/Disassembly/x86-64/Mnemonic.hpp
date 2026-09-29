@@ -133,7 +133,7 @@ enum class Mnemonic : std::uint16_t
       count
 };
 
-static constexpr std::array<std::string_view, static_cast<std::size_t>(Mnemonic::count)> MNEMONIC_STRINGS{
+static constexpr std::array<std::string_view, std::to_underlying(Mnemonic::count)> MNEMONIC_STRINGS{
 #define X(name, string) string,
     MNEMONIC_LIST(X)
 #undef X
@@ -141,6 +141,6 @@ static constexpr std::array<std::string_view, static_cast<std::size_t>(Mnemonic:
 
 constexpr std::string_view to_string(Mnemonic mnemonic) noexcept
 {
-  assert(static_cast<std::size_t>(mnemonic) < static_cast<std::size_t>(Mnemonic::count) && "invalid mnemonic access");
+  assert(std::to_underlying(mnemonic) < std::to_underlying(Mnemonic::count) && "invalid mnemonic access");
   return MNEMONIC_STRINGS[static_cast<std::size_t>(mnemonic)];
 }

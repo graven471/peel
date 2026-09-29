@@ -128,8 +128,8 @@ static constexpr std::array<std::string_view, static_cast<std::size_t>(OperandCo
 
 constexpr std::string_view to_string(OperandCode operand_code) noexcept
 {
-  assert(static_cast<std::uint16_t>(operand_code) < static_cast<std::uint8_t>(OperandCode::count) && "out of bound operand code");
-  return operand_code_strings[static_cast<std::uint16_t>(operand_code)];
+  assert(std::to_underlying(operand_code) < std::to_underlying(OperandCode::count) && "out of bound operand code");
+  return operand_code_strings[std::to_underlying(operand_code)];
 };
 
 // opcode 0x80-0x83
