@@ -65,28 +65,25 @@
 
 int main(int argc, const char* argv[])
 {
-  //if(argc < 2)
-  //{
-  //  std::println(stderr, "Usage: peel <file.exe>");
-  //  return EXIT_FAILURE;
-  //}
+  if(argc < 2)
+  {
+    std::println(stderr, "Usage: peel <file.exe>");
+    return EXIT_FAILURE;
+  }
 
-  // i can use std::string_view here but its not guaranteed to be null
-  // terminated and since most of the time file name will be < 15 chars
-  // internally it can use SSO to avoid heap
-  //std::string FileName = argv[1];
+  std::string FileName = argv[1];
 
-  //if(!FileName.ends_with("exe"))
-  //{
-  //  std::println(stderr, "PE format is required");
-  //  return EXIT_FAILURE;
-  //}
+  if(!FileName.ends_with("exe"))
+  {
+    std::println(stderr, "PE format is required");
+    return EXIT_FAILURE;
+  }
 
-  //std::println("filename: {}", FileName);
+  std::println("filename: {}", FileName);
 
-  std::string test = "C:\\Windows\\System32\\notepad.exe";
+  //std::string test = "C:\\Windows\\System32\\MRT.exe";
 
-  PeelResult<std::span<const std::byte>> Mapping = MapFile(test);
+  PeelResult<std::span<const std::byte>> Mapping = MapFile(FileName);
 
   if(!Mapping)
   {
@@ -106,10 +103,10 @@ int main(int argc, const char* argv[])
 
   Disassembler Disas{&*Image};
 
-  for(std::size_t i = 0; i < 10'000; ++i)
-  {
-    Disas.DoIt();
-  }
+  //for(std::size_t i = 0; i < 10'000; ++i)
+  //{
+  Disas.DoIt();
+  //}
 
   return EXIT_SUCCESS;
 }

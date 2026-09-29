@@ -1,0 +1,214 @@
+
+"AMD uProf (Version:5.3.521.0)"
+PERFORMANCE ANALYSIS REPORT
+
+EXECUTION
+Target Path:,"C:\Users\s1mple\dev\cpp\pe-visualizer\x64\Release\pe-visualizer.exe"
+Command Line Arguments:
+Working Directory:,"C:\Users\s1mple"
+Environment Variables:
+CPU Details:,"Family(0x19), Model(0x50), Number of Cores(12)"
+Operating System:,"Win1125H2-64"
+Collect Command:,"AMDuProfCLI.exe collect -e event=pmcxc0,interval=250000 -e event=pmcx76,interval=250000 -e event=pmcxc2,interval=250000 -e event=pmcxc3,interval=250000 -o C:\Users\s1mple\prof_out C:\Users\s1mple\dev\cpp\pe-visualizer\x64\Release\pe-visualizer.exe"
+Report Command:,"AMDuProfCLI.exe report --detail -i C:\Users\s1mple\prof_out\AMDuProf-pe-visualizer-Custom_Sep-29-2026_09-53-21"
+
+PROFILE DETAILS
+Profile Session Type:,"Custom Profile"
+Profile Scope:,"Single Application"
+CPU Mask:,"0-11"
+CPU Affinity Mask:,"0-11"
+Profile Start Time:,"Tue Sep 29 09:53:21 2026"
+Profile End Time:,"Tue Sep 29 09:55:08 2026"
+Profile Duration:,"106.560 seconds"
+Data Folder:,"C:\Users\s1mple\prof_out\AMDuProf-pe-visualizer-Custom_Sep-29-2026_09-53-21"
+Virtual Machine:,"Yes"
+Hypervisor Vendor:,"Microsoft Hyper-V"
+Call Stack Sampling:,"False"
+Selected View:,"All Events"
+
+MONITORED EVENTS
+PMC Events:,Name,Interval,Unitmask,Countmask,Invert Countmask,User,OS,Description
+,"CYCLES_NOT_IN_HALT (PMCx076)",250000,0x00,0x00,False,True,True,"The number of cpu cycles when the thread is not in halt state."
+,"RETIRED_INST (PMCx0C0)",250000,0x00,0x00,False,True,True,"The number of instructions retired from execution. This count includes exceptions and interrupts. Each exception or interrupt is counted as one instruction."
+,"RETIRED_BR_INST (PMCx0C2)",250000,0x00,0x00,False,True,True,"The number of branch instructions retired. This includes all types of architectural control flow changes, including exceptions and interrupts.
+            "
+,"RETIRED_BR_INST_MISP (PMCx0C3)",250000,0x00,0x00,False,True,True,"The number of retired branch instructions, that were mispredicted.Note that only EX direct mispredicts and indirect target mispredicts are counted.
+            "
+
+
+DERIVED METRICS
+Metric Name,Expression,Description
+"IPC","RETIRED_INST / CYCLES_NOT_IN_HALT","The average number of retired instructions per CPU Cycle. The lower IPC value means the application consumes more cycles due to  cache misses, branch mispredictions, pipeline stalls, I/O or any other performance bottlenecks."
+"CPI","CYCLES_NOT_IN_HALT / RETIRED_INST","The average number of CPU cycles consumed to retire an instruction. This metric is computed as the ratio of CYCLES_NOT_IN_HALT to RETIRED_INST event. The higher values means the application consumes more CPU cycles to retire an instruction due to high cache misses, branch mispredictions, pipeline stalls, I/O or any other bottlenecks. If the CPI values exceeds a threshold value, it will be highlighted in pink."
+"RETIRED_BR_INST (PTI)","( RETIRED_BR_INST * 1000 ) / RETIRED_INST","The number of retired branch instructions per thousand retired instructions."
+"RETIRED_BR_INST_MISP (PTI)","( RETIRED_BR_INST_MISP * 1000 ) / RETIRED_INST","The number of retired mispredicted branches per thousand retired instructions. Branch mispredictions incur significant performance penalty and this metric value should be reduced."
+"%RETIRED_BR_INST_MISP","( RETIRED_BR_INST_MISP * 100 ) / RETIRED_BR_INST","The percentage of retired mispredicted branches with respect to the total number of retired branches."
+"RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP / RETIRED_INST","This metric is computed as retired mispredicted branches divided by the total number of retired instructions."
+"RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_MISP / RETIRED_BR_INST","This metric is computed as retired mispredicted branches divided by the total number of retired branch instructions."
+"RETIRED_BR_INST_RATE","RETIRED_BR_INST / RETIRED_INST","The number of retired branch instructions rate. This metric is computed as retired branches divided by the total number of retired instructions."
+
+
+APPLICATION PERFORMANCE SNAPSHOT
+Thread Count,"6"
+
+
+"10 HOTTEST FUNCTIONS (Sort Event - CYCLES_NOT_IN_HALT)"
+FUNCTION,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE",Module
+"static const void * `anonymous namespace'::_Finding::_Find_impl<`anonymous namespace'::_Finding::_Find_traits_1,0,unsigned char>(const void *, const void *, const unsigned char)",307693.0000,622348.0000,2.0226,0.4944,284.0533,5.3170,176780.0000,3309.0000,1.8718,0.0053,0.0187,0.2841,"c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe"
+"Disassembler::BuildModRMInstruction(struct ModRM const &,struct InstructionDesc const &,class std::span<enum std::byte const ,-1> &)",151261.0000,305289.0000,2.0183,0.4955,283.7934,5.4014,86639.0000,1649.0000,1.9033,0.0054,0.0190,0.2838,"c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe"
+"IsPrefix(enum std::byte)",139216.0000,282641.0000,2.0302,0.4926,281.8912,5.3778,79674.0000,1520.0000,1.9078,0.0054,0.0191,0.2819,"c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe"
+"Disassembler::DoIt(void)",132895.0000,268349.0000,2.0193,0.4952,284.9759,5.6009,76473.0000,1503.0000,1.9654,0.0056,0.0197,0.2850,"c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe"
+"ResolveRegister(unsigned char,enum OperandSize)",116192.0000,234223.0000,2.0158,0.4961,283.1917,5.5503,66330.0000,1300.0000,1.9599,0.0056,0.0196,0.2832,"c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe"
+"ToString(enum Register)",93498.0000,187936.0000,2.0101,0.4975,286.1506,5.3901,53778.0000,1013.0000,1.8837,0.0054,0.0188,0.2862,"c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe"
+"std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >(char const * const)",39821.0000,80883.0000,2.0312,0.4923,281.0850,5.7738,22735.0000,467.0000,2.0541,0.0058,0.0205,0.2811,"c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe"
+"_security_check_cookie",20141.0000,41468.0000,2.0589,0.4857,281.7835,4.8953,11685.0000,203.0000,1.7373,0.0049,0.0174,0.2818,"c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe"
+"_std_find_trivial_1",16656.0000,32983.0000,1.9802,0.5050,292.0899,4.9723,9634.0000,164.0000,1.7023,0.0050,0.0170,0.2921,"c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe"
+"vcruntime140.dll!0x18001c038",9318.0000,18617.0000,1.9980,0.5005,278.9386,4.9417,5193.0000,92.0000,1.7716,0.0049,0.0177,0.2789,"c:\windows\system32\vcruntime140.dll"
+
+"10 HOTTEST PROCESSES (Sort Event - CYCLES_NOT_IN_HALT)"
+PROCESS,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE"
+"c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe (PID:12932)",1063532.0000,2148716.0000,2.0204,0.4950,283.7974,5.4046,609800.0000,11613.0000,1.9044,0.0054,0.0190,0.2838
+
+"10 HOTTEST MODULES (Sort Event - CYCLES_NOT_IN_HALT)"
+MODULE,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE"
+"c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe",1019698.0000,2060710.0000,2.0209,0.4948,283.9051,5.4137,585046.0000,11156.0000,1.9069,0.0054,0.0191,0.2839
+"c:\windows\system32\ucrtbase.dll",25049.0000,50466.0000,2.0147,0.4964,279.8518,5.4294,14123.0000,274.0000,1.9401,0.0054,0.0194,0.2799
+"c:\windows\system32\vcruntime140.dll",18759.0000,37507.0000,1.9994,0.5001,283.3071,4.8791,10626.0000,183.0000,1.7222,0.0049,0.0172,0.2833
+"c:\windows\system32\ntdll.dll",23.0000,28.0000,1.2174,0.8214,178.5714,0.0000,5.0000,0.0000,0.0000,0.0000,0.0000,0.1786
+"c:\windows\system32\msvcrt.dll",1.0000,1.0000,1.0000,1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000
+"c:\windows\system32\kernelbase.dll",1.0000,4.0000,4.0000,0.2500,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000
+"c:\windows\system32\msvcp140.dll",1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000
+
+"10 HOTTEST THREADS (Sort Event - CYCLES_NOT_IN_HALT)"
+THREAD,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE",THREAD ID
+"Thread-11880 (PID:12932)",1063527.0000,2148712.0000,2.0204,0.4950,283.7975,5.4046,609799.0000,11613.0000,1.9044,0.0054,0.0190,0.2838,"11880"
+"Thread-10788 (PID:12932)",2.0000,2.0000,1.0000,1.0000,500.0000,0.0000,1.0000,0.0000,0.0000,0.0000,0.0000,0.5000,"10788"
+"Thread-2968 (PID:12932)",1.0000,1.0000,1.0000,1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,"2968"
+"Thread-11804 (PID:12932)",1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,"11804"
+"Thread-11024 (PID:12932)",1.0000,1.0000,1.0000,1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,"11024"
+
+"ALL PROCESSES (Sort Event - CYCLES_NOT_IN_HALT)"
+PROCESS,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE"
+"c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe (PID:12932)",1063532.0000,2148716.0000,2.0204,0.4950,283.7974,5.4046,609800.0000,11613.0000,1.9044,0.0054,0.0190,0.2838
+
+
+PROFILE REPORT FOR PROCESS - c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe (PID:12932)
+PROCESS,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE"
+"c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe (PID:12932)",1063532.0000,2148716.0000,2.0204,0.4950,283.7974,5.4046,609800.0000,11613.0000,1.9044,0.0054,0.0190,0.2838
+
+THREAD SUMMARY
+THREAD,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE",THREAD ID
+"Thread-11880 (PID:12932)",1063527.0000,2148712.0000,2.0204,0.4950,283.7975,5.4046,609799.0000,11613.0000,1.9044,0.0054,0.0190,0.2838,"11880"
+"Thread-10788 (PID:12932)",2.0000,2.0000,1.0000,1.0000,500.0000,0.0000,1.0000,0.0000,0.0000,0.0000,0.0000,0.5000,"10788"
+"Thread-11024 (PID:12932)",1.0000,1.0000,1.0000,1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,"11024"
+"Thread-2968 (PID:12932)",1.0000,1.0000,1.0000,1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,"2968"
+"Thread-11804 (PID:12932)",1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,"11804"
+
+
+MODULE SUMMARY
+MODULE,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE"
+c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe,1019698.0000,2060710.0000,2.0209,0.4948,283.9051,5.4137,585046.0000,11156.0000,1.9069,0.0054,0.0191,0.2839
+c:\windows\system32\ucrtbase.dll,25049.0000,50466.0000,2.0147,0.4964,279.8518,5.4294,14123.0000,274.0000,1.9401,0.0054,0.0194,0.2799
+c:\windows\system32\vcruntime140.dll,18759.0000,37507.0000,1.9994,0.5001,283.3071,4.8791,10626.0000,183.0000,1.7222,0.0049,0.0172,0.2833
+c:\windows\system32\ntdll.dll,23.0000,28.0000,1.2174,0.8214,178.5714,0.0000,5.0000,0.0000,0.0000,0.0000,0.0000,0.1786
+c:\windows\system32\msvcrt.dll,1.0000,1.0000,1.0000,1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000
+c:\windows\system32\kernelbase.dll,1.0000,4.0000,4.0000,0.2500,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000
+c:\windows\system32\msvcp140.dll,1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000
+
+
+FUNCTION SUMMARY
+FUNCTION,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE",MODULE
+"static const void * `anonymous namespace'::_Finding::_Find_impl<`anonymous namespace'::_Finding::_Find_traits_1,0,unsigned char>(const void *, const void *, const unsigned char)",307693.0000,622348.0000,2.0226,0.4944,284.0533,5.3170,176780.0000,3309.0000,1.8718,0.0053,0.0187,0.2841,c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe
+"Disassembler::BuildModRMInstruction(struct ModRM const &,struct InstructionDesc const &,class std::span<enum std::byte const ,-1> &)",151261.0000,305289.0000,2.0183,0.4955,283.7934,5.4014,86639.0000,1649.0000,1.9033,0.0054,0.0190,0.2838,c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe
+"IsPrefix(enum std::byte)",139216.0000,282641.0000,2.0302,0.4926,281.8912,5.3778,79674.0000,1520.0000,1.9078,0.0054,0.0191,0.2819,c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe
+"Disassembler::DoIt(void)",132895.0000,268349.0000,2.0193,0.4952,284.9759,5.6009,76473.0000,1503.0000,1.9654,0.0056,0.0197,0.2850,c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe
+"ResolveRegister(unsigned char,enum OperandSize)",116192.0000,234223.0000,2.0158,0.4961,283.1917,5.5503,66330.0000,1300.0000,1.9599,0.0056,0.0196,0.2832,c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe
+"ToString(enum Register)",93498.0000,187936.0000,2.0101,0.4975,286.1506,5.3901,53778.0000,1013.0000,1.8837,0.0054,0.0188,0.2862,c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe
+"std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >(char const * const)",39821.0000,80883.0000,2.0312,0.4923,281.0850,5.7738,22735.0000,467.0000,2.0541,0.0058,0.0205,0.2811,c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe
+"_security_check_cookie",20141.0000,41468.0000,2.0589,0.4857,281.7835,4.8953,11685.0000,203.0000,1.7373,0.0049,0.0174,0.2818,c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe
+"_std_find_trivial_1",16656.0000,32983.0000,1.9802,0.5050,292.0899,4.9723,9634.0000,164.0000,1.7023,0.0050,0.0170,0.2921,c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe
+"vcruntime140.dll!0x18001c038",9318.0000,18617.0000,1.9980,0.5005,278.9386,4.9417,5193.0000,92.0000,1.7716,0.0049,0.0177,0.2789,c:\windows\system32\vcruntime140.dll
+
+Function Detail Data
+Function,File,Line,SourceCode,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE"
+"static const void * `anonymous namespace'::_Finding::_Find_impl<`anonymous namespace'::_Finding::_Find_traits_1,0,unsigned char>(const void *, const void *, const unsigned char)",,,,307693.0000,622348.0000,2.0226,0.4944,284.0533,5.3170,176780.0000,3309.0000,1.8718,0.0053,0.0187,0.2841
+,D:\a\_work\1\s\src\vctools\crt\github\stl\src\vector_algorithms.cpp (SOURCE FILE NOT FOUND),4868,,979.0000,2168.0000,2.2145,0.4516,253.6900,5.0738,550.0000,11.0000,2.0000,0.0051,0.0200,0.2537
+,,4869,,27263.0000,55114.0000,2.0216,0.4947,281.2171,5.0804,15499.0000,280.0000,1.8066,0.0051,0.0181,0.2812
+,,4871,,3445.0000,7557.0000,2.1936,0.4559,278.5497,3.4405,2105.0000,26.0000,1.2352,0.0034,0.0124,0.2785
+,,4917,,15571.0000,30820.0000,1.9793,0.5052,288.8384,5.6132,8902.0000,173.0000,1.9434,0.0056,0.0194,0.2888
+,,4918,,27425.0000,54947.0000,2.0035,0.4991,288.2414,5.1140,15838.0000,281.0000,1.7742,0.0051,0.0177,0.2882
+,,4920,,83.0000,145.0000,1.7470,0.5724,241.3793,6.8966,35.0000,1.0000,2.8571,0.0069,0.0286,0.2414
+,,4924,,25291.0000,50269.0000,1.9876,0.5031,290.3778,5.0926,14597.0000,256.0000,1.7538,0.0051,0.0175,0.2904
+,,4930,,36225.0000,73070.0000,2.0171,0.4958,287.6830,5.3373,21021.0000,390.0000,1.8553,0.0053,0.0186,0.2877
+,,4933,,1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000
+,,4934,,26159.0000,52881.0000,2.0215,0.4947,283.5612,5.7866,14995.0000,306.0000,2.0407,0.0058,0.0204,0.2836
+,,4938,,1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000
+,,4939,,7749.0000,15332.0000,1.9786,0.5054,280.9157,6.1962,4307.0000,95.0000,2.2057,0.0062,0.0221,0.2809
+,,4942,,134493.0000,274254.0000,2.0392,0.4904,281.5674,5.3162,77221.0000,1458.0000,1.8881,0.0053,0.0189,0.2816
+,,4943,,3008.0000,5791.0000,1.9252,0.5194,295.2858,5.5258,1710.0000,32.0000,1.8713,0.0055,0.0187,0.2953
+
+Function,File,Line,SourceCode,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE"
+"Disassembler::BuildModRMInstruction(struct ModRM const &,struct InstructionDesc const &,class std::span<enum std::byte const ,-1> &)",,,,151261.0000,305289.0000,2.0183,0.4955,283.7934,5.4014,86639.0000,1649.0000,1.9033,0.0054,0.0190,0.2838
+,C:\Users\s1mple\dev\cpp\pe-visualizer\Source\Disassembly\Disassembler.cpp,353,"{",11980.0000,24590.0000,2.0526,0.4872,284.9532,5.1647,7007.0000,127.0000,1.8125,0.0052,0.0181,0.2850
+,,354,"  ModRMOperandInfo Info     = ResolveModRM(ModRm, MetaData);",76240.0000,153069.0000,2.0077,0.4981,284.8258,5.6902,43598.0000,871.0000,1.9978,0.0057,0.0200,0.2848
+,,388,"  std::string      SourceRegister      = Info.Source == ModRMField::Rm ? ToString(Info.Rm) : ToString(Info.Reg);",7949.0000,15886.0000,1.9985,0.5004,284.7791,4.8470,4524.0000,77.0000,1.7020,0.0048,0.0170,0.2848
+,,389,"  std::string      DestinationRegister = Info.Destination == ModRMField::Rm ? ToString(Info.Rm) : ToString(Info.Reg);",5256.0000,10679.0000,2.0318,0.4922,287.5737,5.2439,3071.0000,56.0000,1.8235,0.0052,0.0182,0.2876
+,,390,"  EffectiveAddress effective_address   = build_base_address();",12177.0000,24159.0000,1.9840,0.5040,290.2438,5.5052,7012.0000,133.0000,1.8967,0.0055,0.0190,0.2902
+,,396,"}",37659.0000,76906.0000,2.0422,0.4897,278.6129,5.0061,21427.0000,385.0000,1.7968,0.0050,0.0180,0.2786
+
+Function,File,Line,SourceCode,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE"
+"IsPrefix(enum std::byte)",,,,139216.0000,282641.0000,2.0302,0.4926,281.8912,5.3778,79674.0000,1520.0000,1.9078,0.0054,0.0191,0.2819
+,C:\Users\s1mple\dev\cpp\pe-visualizer\Source\Disassembly\x86-64\Prefixes.hpp,43,"{",13299.0000,27004.0000,2.0305,0.4925,279.2179,4.8511,7540.0000,131.0000,1.7374,0.0049,0.0174,0.2792
+,,44,"  return std::ranges::contains(LegacyGroup1Prefixes, byte) || std::ranges::contains(LegacyGroup2Prefixes, byte)",43314.0000,88291.0000,2.0384,0.4906,278.8167,5.4932,24617.0000,485.0000,1.9702,0.0055,0.0197,0.2788
+,,46,"}",82603.0000,167346.0000,2.0259,0.4936,283.9446,5.4020,47517.0000,904.0000,1.9025,0.0054,0.0190,0.2839
+
+Function,File,Line,SourceCode,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE"
+"Disassembler::DoIt(void)",,,,132895.0000,268349.0000,2.0193,0.4952,284.9759,5.6009,76473.0000,1503.0000,1.9654,0.0056,0.0197,0.2850
+,C:\Users\s1mple\dev\cpp\pe-visualizer\Source\Disassembly\Disassembler.cpp,16,"{",1.0000,4.0000,4.0000,0.2500,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000
+,,19,"  auto It = std::ranges::find_if(Image->SectionHeaders, [&](const ImageSection& Section) {",15.0000,28.0000,1.8667,0.5357,214.2857,0.0000,6.0000,0.0000,0.0000,0.0000,0.0000,0.2143
+,,31,"  std::span<const std::byte> InstructionEncoding = TextSection.Data;",2.0000,6.0000,3.0000,0.3333,166.6667,0.0000,1.0000,0.0000,0.0000,0.0000,0.0000,0.1667
+,,35,"  while(!InstructionEncoding.empty())",13999.0000,28576.0000,2.0413,0.4899,282.2998,5.8791,8067.0000,168.0000,2.0826,0.0059,0.0208,0.2823
+,,39,"    PrefixScanner(InstructionEncoding);",28160.0000,57066.0000,2.0265,0.4935,285.4239,5.4323,16288.0000,310.0000,1.9032,0.0054,0.0190,0.2854
+,,40,"    OpcodeResult Opcode = OpcodeScanner(InstructionEncoding);",13489.0000,27102.0000,2.0092,0.4977,286.6578,5.3133,7769.0000,144.0000,1.8535,0.0053,0.0185,0.2867
+,,43,"    InstructionDesc OpcodeMetadata = OPCODE_TABLE[std::to_integer<std::uint8_t>(Opcode.Bytes[0])];",48645.0000,98356.0000,2.0219,0.4946,284.0498,5.1141,27938.0000,503.0000,1.8004,0.0051,0.0180,0.2840
+,,45,"    if(OpcodeMetadata.ModRM)",51.0000,82.0000,1.6078,0.6220,268.2927,0.0000,22.0000,0.0000,0.0000,0.0000,0.0000,0.2683
+,,50,"      ModRM ModRM = ModRMScanner(ModRMByte);",4568.0000,9369.0000,2.0510,0.4876,283.3814,7.6849,2655.0000,72.0000,2.7119,0.0077,0.0271,0.2834
+,,52,"      InstructionEncoding = InstructionEncoding.subspan(1);",27.0000,68.0000,2.5185,0.3971,117.6471,14.7059,8.0000,1.0000,12.5000,0.0147,0.1250,0.1176
+,,55,"      BuildModRMInstruction(ModRM, OpcodeMetadata, InstructionEncoding);",23938.0000,47692.0000,1.9923,0.5019,287.6583,6.3952,13719.0000,305.0000,2.2232,0.0064,0.0222,0.2877
+
+Function,File,Line,SourceCode,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE"
+"ResolveRegister(unsigned char,enum OperandSize)",,,,116192.0000,234223.0000,2.0158,0.4961,283.1917,5.5503,66330.0000,1300.0000,1.9599,0.0056,0.0196,0.2832
+,C:\Users\s1mple\dev\cpp\pe-visualizer\Source\Disassembly\x86-64\Registers.hpp,61,"{",2560.0000,5004.0000,1.9547,0.5116,287.9696,6.5947,1441.0000,33.0000,2.2901,0.0066,0.0229,0.2880
+,,62,"  switch(Encoding)",42194.0000,85822.0000,2.0340,0.4916,282.7946,5.2784,24270.0000,453.0000,1.8665,0.0053,0.0187,0.2828
+,,72,"    GPR_REGISTERS(X)",2587.0000,5502.0000,2.1268,0.4702,260.8142,3.9985,1435.0000,22.0000,1.5331,0.0040,0.0153,0.2608
+,,78,"}",68851.0000,137895.0000,2.0028,0.4993,284.1582,5.7435,39184.0000,792.0000,2.0212,0.0057,0.0202,0.2842
+
+Function,File,Line,SourceCode,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE"
+"ToString(enum Register)",,,,93498.0000,187936.0000,2.0101,0.4975,286.1506,5.3901,53778.0000,1013.0000,1.8837,0.0054,0.0188,0.2862
+,C:\Users\s1mple\dev\cpp\pe-visualizer\Source\Disassembly\x86-64\Registers.hpp,27,"{",16661.0000,33533.0000,2.0127,0.4969,286.7325,5.2784,9615.0000,177.0000,1.8409,0.0053,0.0184,0.2867
+,,28,"  switch(Value)",29845.0000,60318.0000,2.0210,0.4948,284.3264,5.2223,17150.0000,315.0000,1.8367,0.0052,0.0184,0.2843
+,,34,"    REGISTER_LIST(X)",38672.0000,77635.0000,2.0075,0.4981,285.9277,5.6160,22198.0000,436.0000,1.9641,0.0056,0.0196,0.2859
+,,40,"}",8320.0000,16450.0000,1.9772,0.5058,292.7052,5.1672,4815.0000,85.0000,1.7653,0.0052,0.0177,0.2927
+
+Function,File,Line,SourceCode,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE"
+"std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >(char const * const)",,,,39821.0000,80883.0000,2.0312,0.4923,281.0850,5.7738,22735.0000,467.0000,2.0541,0.0058,0.0205,0.2811
+,C:\Program Files\Microsoft Visual Studio\18\Insiders\VC\Tools\MSVC\14.51.36231\include\xstring,818,"    _CONSTEXPR20 basic_string(_In_z_ const _Elem* const _Ptr) : _Mypair(_Zero_then_variadic_args_t{}) {",12600.0000,24758.0000,1.9649,0.5089,283.3024,5.6143,7014.0000,139.0000,1.9818,0.0056,0.0198,0.2833
+,,819,"        _Construct<_Construct_strategy::_From_ptr>(_Ptr, _Convert_size<size_type>(_Traits::length(_Ptr)));",5558.0000,10942.0000,1.9687,0.5080,279.5650,6.2146,3059.0000,68.0000,2.2229,0.0062,0.0222,0.2796
+,,820,"    }",21663.0000,45183.0000,2.0857,0.4795,280.2381,5.7544,12662.0000,260.0000,2.0534,0.0058,0.0205,0.2802
+
+Function,File,Line,SourceCode,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE"
+"_security_check_cookie",,,,20141.0000,41468.0000,2.0589,0.4857,281.7835,4.8953,11685.0000,203.0000,1.7373,0.0049,0.0174,0.2818
+,D:\a\_work\1\s\src\vctools\crt\vcstartup\src\gs\amd64\amdsecgs.asm (SOURCE FILE NOT FOUND),45,,2997.0000,5992.0000,1.9993,0.5002,290.5541,5.3405,1741.0000,32.0000,1.8380,0.0053,0.0184,0.2906
+,,48,,4654.0000,9811.0000,2.1081,0.4744,271.1242,4.9944,2660.0000,49.0000,1.8421,0.0050,0.0184,0.2711
+,,49,,4172.0000,8373.0000,2.0070,0.4983,288.4271,5.1356,2415.0000,43.0000,1.7805,0.0051,0.0178,0.2884
+,,50,,72.0000,149.0000,2.0694,0.4832,228.1879,13.4228,34.0000,2.0000,5.8824,0.0134,0.0588,0.2282
+,,51,,8245.0000,17143.0000,2.0792,0.4810,282.0393,4.4916,4835.0000,77.0000,1.5926,0.0045,0.0159,0.2820
+,,52,,1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000
+
+Function,File,Line,SourceCode,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE"
+"_std_find_trivial_1",,,,16656.0000,32983.0000,1.9802,0.5050,292.0899,4.9723,9634.0000,164.0000,1.7023,0.0050,0.0170,0.2921
+,D:\a\_work\1\s\src\vctools\crt\github\stl\src\vector_algorithms.cpp (SOURCE FILE NOT FOUND),5442,,16656.0000,32983.0000,1.9802,0.5050,292.0899,4.9723,9634.0000,164.0000,1.7023,0.0050,0.0170,0.2921
+
+Function,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE"
+"vcruntime140.dll!0x18001c038" (SYSTEM MODULE FUNCTION),9318.0000,18617.0000,1.9980,0.5005,278.9386,4.9417,5193.0000,92.0000,1.7716,0.0049,0.0177,0.2789
+

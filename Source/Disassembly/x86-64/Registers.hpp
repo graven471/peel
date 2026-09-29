@@ -8,59 +8,93 @@
 #include "Types.hpp"
 
 #define REGISTER_LIST(X)                                                                                               \
-  X(AL)                                                                                                                \
-  X(CL)                                                                                                                \
-  X(DL)                                                                                                                \
-  X(BL)                                                                                                                \
-  X(AH)                                                                                                                \
-  X(CH)                                                                                                                \
-  X(DH)                                                                                                                \
-  X(BH)                                                                                                                \
-  X(AX)                                                                                                                \
-  X(CX)                                                                                                                \
-  X(DX)                                                                                                                \
-  X(BX)                                                                                                                \
-  X(SP)                                                                                                                \
-  X(BP)                                                                                                                \
-  X(SI)                                                                                                                \
-  X(DI)                                                                                                                \
-  X(EAX)                                                                                                               \
-  X(ECX)                                                                                                               \
-  X(EDX)                                                                                                               \
-  X(EBX)                                                                                                               \
-  X(ESP)                                                                                                               \
-  X(EBP)                                                                                                               \
-  X(ESI)                                                                                                               \
-  X(EDI)                                                                                                               \
-  X(RAX)                                                                                                               \
-  X(RCX)                                                                                                               \
-  X(RDX)                                                                                                               \
-  X(RBX)                                                                                                               \
-  X(RSP)                                                                                                               \
-  X(RBP)                                                                                                               \
-  X(RSI)                                                                                                               \
-  X(RDI)                                                                                                               \
-  X(R8)                                                                                                                \
-  X(R9)                                                                                                                \
-  X(R10)                                                                                                               \
-  X(R11) X(R12) X(R13) X(R14) X(R15) X(R8D) X(R9D) X(R10D) X(R11D) X(R12D) X(R13D) X(R14D) X(R15D) X(R8W) X(R9W)       \
-      X(R10W) X(R11W) X(R12W) X(R13W) X(R14W) X(R15W) X(CS) X(DS) X(ES) X(SS) X(FS) X(GS) X(CR0) X(CR1) X(CR2) X(CR3)  \
-          X(CR4) X(CR8) X(RIP) X(EIP) X(RFLAGS) X(EFLAGS)
+  X(AL, "al")                                                                                                          \
+  X(CL, "cl")                                                                                                          \
+  X(DL, "dl")                                                                                                          \
+  X(BL, "bl")                                                                                                          \
+  X(AH, "ah")                                                                                                          \
+  X(CH, "ch")                                                                                                          \
+  X(DH, "dh")                                                                                                          \
+  X(BH, "bh")                                                                                                          \
+  X(AX, "ax")                                                                                                          \
+  X(CX, "cx")                                                                                                          \
+  X(DX, "dx")                                                                                                          \
+  X(BX, "bx")                                                                                                          \
+  X(SP, "sp")                                                                                                          \
+  X(BP, "bp")                                                                                                          \
+  X(SI, "si")                                                                                                          \
+  X(DI, "di")                                                                                                          \
+  X(EAX, "eax")                                                                                                        \
+  X(ECX, "ecx")                                                                                                        \
+  X(EDX, "edx")                                                                                                        \
+  X(EBX, "ebx")                                                                                                        \
+  X(ESP, "esp")                                                                                                        \
+  X(EBP, "ebp")                                                                                                        \
+  X(ESI, "esi")                                                                                                        \
+  X(EDI, "edi")                                                                                                        \
+  X(RAX, "rax")                                                                                                        \
+  X(RCX, "rcx")                                                                                                        \
+  X(RDX, "rdx")                                                                                                        \
+  X(RBX, "rbx")                                                                                                        \
+  X(RSP, "rsp")                                                                                                        \
+  X(RBP, "rbp")                                                                                                        \
+  X(RSI, "rsi")                                                                                                        \
+  X(RDI, "rdi")                                                                                                        \
+  X(R8, "r8")                                                                                                          \
+  X(R9, "r9")                                                                                                          \
+  X(R10, "r10")                                                                                                        \
+  X(R11, "r11")                                                                                                        \
+  X(R12, "r12")                                                                                                        \
+  X(R13, "r13")                                                                                                        \
+  X(R14, "r14")                                                                                                        \
+  X(R15, "r15")                                                                                                        \
+  X(R8D, "r8d")                                                                                                        \
+  X(R9D, "r9d")                                                                                                        \
+  X(R10D, "r10d")                                                                                                      \
+  X(R11D, "r11d")                                                                                                      \
+  X(R12D, "r12d")                                                                                                      \
+  X(R13D, "r13d")                                                                                                      \
+  X(R14D, "r14d")                                                                                                      \
+  X(R15D, "r15d")                                                                                                      \
+  X(R8W, "r8w")                                                                                                        \
+  X(R9W, "r9w")                                                                                                        \
+  X(R10W, "r10w")                                                                                                      \
+  X(R11W, "r11w")                                                                                                      \
+  X(R12W, "r12w")                                                                                                      \
+  X(R13W, "r13w")                                                                                                      \
+  X(R14W, "r14w")                                                                                                      \
+  X(R15W, "r15w")                                                                                                      \
+  X(CS, "cs")                                                                                                          \
+  X(DS, "ds")                                                                                                          \
+  X(ES, "es")                                                                                                          \
+  X(SS, "ss")                                                                                                          \
+  X(FS, "fs")                                                                                                          \
+  X(GS, "gs")                                                                                                          \
+  X(CR0, "cr0")                                                                                                        \
+  X(CR1, "cr1")                                                                                                        \
+  X(CR2, "cr2")                                                                                                        \
+  X(CR3, "cr3")                                                                                                        \
+  X(CR4, "cr4")                                                                                                        \
+  X(CR8, "cr8")                                                                                                        \
+  X(RIP, "rip")                                                                                                        \
+  X(EIP, "eip")                                                                                                        \
+  X(RFLAGS, "rflags")                                                                                                  \
+  X(EFLAGS, "eflags")
 
 enum class Register : std::uint16_t
 {
-#define X(name) name,
+#define X(name, string) name,
   REGISTER_LIST(X)
 #undef X
 };
 
-constexpr std::string ToString(Register Value) noexcept
+constexpr std::string_view ToString(Register Value) noexcept
 {
   switch(Value)
   {
-#define X(name)                                                                                                        \
+#define X(name, string)                                                                                                \
   case Register::name:                                                                                                 \
-    return #name;
+    return string;
 
     REGISTER_LIST(X)
 

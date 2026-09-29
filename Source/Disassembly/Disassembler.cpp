@@ -234,14 +234,14 @@ void Disassembler::BuildModRMInstruction(const ModRM& ModRm, const InstructionDe
     return effective_address;
   };
 
-  std::string      SourceRegister      = Info.Source == ModRMField::Rm ? ToString(Info.Rm) : ToString(Info.Reg);
-  std::string      DestinationRegister = Info.Destination == ModRMField::Rm ? ToString(Info.Rm) : ToString(Info.Reg);
+  std::string_view SourceRegister      = Info.Source == ModRMField::Rm ? ToString(Info.Rm) : ToString(Info.Reg);
+  std::string_view DestinationRegister = Info.Destination == ModRMField::Rm ? ToString(Info.Rm) : ToString(Info.Reg);
   EffectiveAddress effective_address   = build_base_address();
 
-  //std::println("{} {}, {}", Mnemonic, DestinationRegister,
-  //             Info.Mode == ModRMMode::Register ?
-  //                 SourceRegister :
-  //                 effective_address.render_sib(OperandSize::Bits64, false, Image->NTHeaders, ModRm));
+  std::println("{} {}, {}", Mnemonic, DestinationRegister,
+               Info.Mode == ModRMMode::Register ? std::string{SourceRegister} :
+                                                  // FIXME: dangling lifetime issue fix it
+                   effective_address.render_sib(OperandSize::Bits64, false, Image->NTHeaders, ModRm));
 }
 
 void Disassembler::build_immediate_instruction(const InstructionDesc& metadata, std::span<const std::byte>& bytes)
