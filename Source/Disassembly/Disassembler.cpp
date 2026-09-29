@@ -235,11 +235,9 @@ void Disassembler::build_mod_rm_instruction(const ModRM& mod_rm, const Instructi
     return effective_address;
   };
 
-  std::string_view source_register = info.source == ModRMField::Rm ? to_string(info.rm) : to_string(info.reg);
-
+  std::string_view source_register      = info.source == ModRMField::Rm ? to_string(info.rm) : to_string(info.reg);
   std::string_view destination_register = info.destination == ModRMField::Rm ? to_string(info.rm) : to_string(info.reg);
-
-  EffectiveAddress effective_address = build_base_address();
+  EffectiveAddress effective_address    = build_base_address();
 
   //std::println("{} {}, {}", mnemonic, destination_register,
   //             info.mode == ModRMMode::Register ? std::string{source_register} :
