@@ -116,24 +116,21 @@ enum class OperandCode : std::uint16_t
 {
 #define X(name) name,
   OPERAND_CODE_LIST(X)
+#undef X,
+      count
+};
+
+static constexpr std::array<std::string_view, static_cast<std::size_t>(OperandCode::count)> operand_code_strings{
+#define X(name) #name,
+    OPERAND_CODE_LIST(X)
 #undef X
 };
 
-constexpr std::string_view ToString(OperandCode Value) noexcept
+constexpr std::string_view to_string(OperandCode operand_code) noexcept
 {
-  switch(Value)
-  {
-#define X(name)                                                                                                        \
-  case OperandCode::name:                                                                                              \
-    return #name;
-
-    OPERAND_CODE_LIST(X)
-
-#undef X
-  }
-
-  return "Unknown";
-}
+  assert(static_cast<std::uint16_t>(operand_code) < static_cast<std::uint8_t>(OperandCode::count) && "out of bound operand code");
+  return operand_code_strings[static_cast<std::uint16_t>(operand_code)];
+};
 
 // opcode 0x80-0x83
 static constexpr Mnemonic GROUP1[8] = {
