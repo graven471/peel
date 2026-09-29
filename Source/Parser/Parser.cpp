@@ -8,14 +8,14 @@
 
 [[nodiscard]] PeelResult<PEImage> PEParser::parse()
 {
-  PeelResult<ImageDosHeader> dos_header = parse_dos_header(mapped_bytes.subspan(0, sizeof(ImageDosHeader)));
+  PeelResult<ImageDosHeader> dos_header = parse_dos_header(mapped_bytes_.subspan(0, sizeof(ImageDosHeader)));
 
   if(!dos_header)
     return std::unexpected(dos_header.error());
 
   // [PE_SIGNATURE | FileHeader (20 bytes) | OptionalHeader]
   PeelResult<ImageFileHeader> file_header =
-      parse_file_header(mapped_bytes.subspan(dos_header->LfaNew, sizeof(ImageFileHeader) + SIGNATURE.size()));
+      parse_file_header(mapped_bytes_.subspan(dos_header->LfaNew, sizeof(ImageFileHeader) + SIGNATURE.size()));
 
   if(!file_header)
     return std::unexpected(file_header.error());
@@ -27,7 +27,7 @@
   const std::size_t optional_header_offset = dos_header->LfaNew + SIGNATURE.size() + sizeof(::ImageFileHeader);
 
   PeelResult<ImageOptionalHeader> optional_header =
-      parse_optional_header(mapped_bytes.subspan(optional_header_offset, file_header->SizeOfOptionalHeader));
+      parse_optional_header(mapped_bytes_.subspan(optional_header_offset, file_header->SizeOfOptionalHeader));
 
   if(!optional_header)
     return std::unexpected(optional_header.error());
@@ -46,7 +46,7 @@
       dos_header->LfaNew + sizeof(SIGNATURE) + sizeof(ImageFileHeader) + file_header->SizeOfOptionalHeader;
 
   PeelResult<std::vector<ImageSection>> sections =
-      parse_section_headers(mapped_bytes.subspan(section_header_offset, file_header->NumberOfSections * sizeof(ImageSectionHeader)),
+      parse_section_headers(mapped_bytes_.subspan(section_header_offset, file_header->NumberOfSections * sizeof(ImageSectionHeader)),
                             file_header->NumberOfSections);
 
   if(!sections)
@@ -128,10 +128,10 @@ PeelResult<std::vector<ImageSection>> PEParser::parse_section_headers(std::span<
     const uint32_t raw_data_offset = sections[index].Header.PointerToRawData;
     const uint32_t raw_data_size   = sections[index].Header.SizeOfRawData;
 
-    if(raw_data_offset > mapped_bytes.size() || raw_data_size > mapped_bytes.size() - raw_data_offset) [[unlikely]]
+    if(raw_data_offset > mapped_bytes_.size() || raw_data_size > mapped_bytes_.size() - raw_data_offset) [[unlikely]]
       return std::unexpected(PeelError{PeelErrorCode::PEEL_INVALID_SECTION});
 
-    sections[index].Data = mapped_bytes.subspan(raw_data_offset, raw_data_size);
+    sections[index].Data = mapped_bytes_.subspan(raw_data_offset, raw_data_size);
   }
 
   return sections;
@@ -147,7 +147,7 @@ std::vector<Import> PEParser::parse_imports(std::span<const ImageSection> sectio
       // todo: handle PE32 in that case this is uint32_t
       std::uint64_t import_lookup_entry;
 
-      std::memcpy(&import_lookup_entry, mapped_bytes.data() + import_lookup_table_offset + index * sizeof(uint64_t),
+      std::memcpy(&import_lookup_entry, mapped_bytes_.data() + import_lookup_table_offset + index * sizeof(uint64_t),
                   sizeof(import_lookup_entry));
 
       // last entry is Null
@@ -160,7 +160,7 @@ std::vector<Import> PEParser::parse_imports(std::span<const ImageSection> sectio
       if(!import_by_name_offset) [[unlikely]]
         continue;
 
-      auto import_by_name = mapped_bytes.subspan(*import_by_name_offset);
+      auto import_by_name = mapped_bytes_.subspan(*import_by_name_offset);
       auto name_bytes     = import_by_name.subspan(2);
 
       auto it = std::ranges::find(name_bytes, std::byte{0});
@@ -193,7 +193,7 @@ std::vector<Import> PEParser::parse_imports(std::span<const ImageSection> sectio
           if(!file_offset)
             continue;
 
-          std::span<const std::byte> import_data = mapped_bytes.subspan(*file_offset, import_dir.Size);
+          std::span<const std::byte> import_data = mapped_bytes_.subspan(*file_offset, import_dir.Size);
 
           for(std::size_t index = 0; index < descriptor_count; ++index)
           {
@@ -205,7 +205,7 @@ std::vector<Import> PEParser::parse_imports(std::span<const ImageSection> sectio
             if(!dll_name_offset)
               continue;
 
-            auto dll_name_bytes = mapped_bytes.subspan(*dll_name_offset);
+            auto dll_name_bytes = mapped_bytes_.subspan(*dll_name_offset);
 
             auto it = std::ranges::find(dll_name_bytes, std::byte{0});
 

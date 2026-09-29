@@ -88,26 +88,26 @@ enum class Register : std::uint8_t
       count
 };
 
-static constexpr std::array<std::string_view, static_cast<std::size_t>(Register::count)> REGISTER_STRINGS{
+static constexpr std::array<std::string_view, static_cast<std::size_t>(Register::count)> register_strings{
 #define X(name, string) string,
     REGISTER_LIST(X)
 #undef X
 };
 
-constexpr std::string_view to_string(Register value) noexcept
+constexpr std::string_view to_string(Register reg) noexcept
 {
-  assert(static_cast<std::uint8_t>(value) < static_cast<std::uint8_t>(Register::count) && "out of bound register access");
-  return REGISTER_STRINGS[static_cast<std::uint8_t>(value)];
+  assert(static_cast<std::uint8_t>(reg) < static_cast<std::uint8_t>(Register::count) && "out of bound register access");
+  return register_strings[static_cast<std::uint8_t>(reg)];
 }
 
-struct GrpRegisters
+struct GpRegisters
 {
   Register reg64;
   Register reg32;
   Register reg16;
 };
 
-static constexpr GrpRegisters GRP_REGISTER_TABLE[16] = {
+static constexpr GpRegisters grp_register_table[16] = {
     {.reg64 = Register::RAX, .reg32 = Register::EAX, .reg16 = Register::AX},
     {.reg64 = Register::RCX, .reg32 = Register::ECX, .reg16 = Register::CX},
     {.reg64 = Register::RDX, .reg32 = Register::EDX, .reg16 = Register::DX},
@@ -126,17 +126,17 @@ static constexpr GrpRegisters GRP_REGISTER_TABLE[16] = {
     {.reg64 = Register::R15, .reg32 = Register::R15D, .reg16 = Register::R15W},
 };
 
-static constexpr Register resolve_gp_register(std::uint8_t encoding, OperandSize opsize) noexcept
+static constexpr Register resolve_gp_register(std::uint8_t encoding, OperandSize operand_size) noexcept
 {
   assert(encoding < 16 && "there exists only 16 general purpose registers");
 
-  GrpRegisters gp_register = GRP_REGISTER_TABLE[encoding];
+  const GpRegisters& gp_registers = grp_register_table[encoding];
 
-  if(opsize == OperandSize::Bits64)
-    return gp_register.reg64;
+  if(operand_size == OperandSize::Bits64)
+    return gp_registers.reg64;
 
-  if(opsize == OperandSize::Bits32)
-    return gp_register.reg32;
+  if(operand_size == OperandSize::Bits32)
+    return gp_registers.reg32;
 
-  return gp_register.reg16;
+  return gp_registers.reg16;
 }

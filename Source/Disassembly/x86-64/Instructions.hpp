@@ -2,7 +2,7 @@
 
 #include "Opcodes.hpp"
 
-enum class mod_rmRegMode : uint8_t
+enum class ModRmRegMode : uint8_t
 {
   None,
   Register,        // /r
@@ -12,13 +12,13 @@ enum class mod_rmRegMode : uint8_t
 // Mnemonic dst, src
 struct InstructionDesc
 {
-  Mnemonic      mnemonic;
-  OperandCode   destination;
-  OperandCode   source;
-  OperandCode   extra     = OperandCode::None;
-  bool          mod_rm    = false;
-  mod_rmRegMode reg_field = mod_rmRegMode::None;
-  std::uint8_t  reg_extension;
+  Mnemonic     mnemonic;
+  OperandCode  destination;
+  OperandCode  source;
+  OperandCode  extra           = OperandCode::None;
+  bool         has_mod_rm      = false;
+  ModRmRegMode mod_rm_reg_mode = ModRmRegMode::None;
+  std::uint8_t opcode_extension;
 };
 
 // E, G, C, M, D, M, Q, R, S, U, V, W needs ModR/M
@@ -27,12 +27,12 @@ struct InstructionDesc
 // C  -> ModR/M.reg (control register)
 // D  -> ModR/M.reg (debug register)
 // b/v/w/d/q/etc. -> describe the operand's size/type
-static constexpr InstructionDesc OPCODE_TABLE[256] = {
+static constexpr InstructionDesc opcode_table[256] = {
     // 0x00
-    {.mnemonic = Mnemonic::ADD, .destination = OperandCode::Eb, .source = OperandCode::Gb, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::ADD, .destination = OperandCode::Ev, .source = OperandCode::Gv, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::ADD, .destination = OperandCode::Gb, .source = OperandCode::Eb, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::ADD, .destination = OperandCode::Gv, .source = OperandCode::Ev, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
+    {.mnemonic = Mnemonic::ADD, .destination = OperandCode::Eb, .source = OperandCode::Gb, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::ADD, .destination = OperandCode::Ev, .source = OperandCode::Gv, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::ADD, .destination = OperandCode::Gb, .source = OperandCode::Eb, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::ADD, .destination = OperandCode::Gv, .source = OperandCode::Ev, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
     {.mnemonic = Mnemonic::ADD, .destination = OperandCode::AL, .source = OperandCode::Ib},
     {.mnemonic = Mnemonic::ADD, .destination = OperandCode::rAX, .source = OperandCode::Iz},
     {.mnemonic = Mnemonic::PUSH, .destination = OperandCode::Es, .source = OperandCode::None},
@@ -40,10 +40,10 @@ static constexpr InstructionDesc OPCODE_TABLE[256] = {
     {.mnemonic = Mnemonic::POP, .destination = OperandCode::Es, .source = OperandCode::None},
 
     // 0x08
-    {.mnemonic = Mnemonic::OR, .destination = OperandCode::Eb, .source = OperandCode::Gb, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::OR, .destination = OperandCode::Ev, .source = OperandCode::Gv, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::OR, .destination = OperandCode::Gb, .source = OperandCode::Eb, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::OR, .destination = OperandCode::Gv, .source = OperandCode::Ev, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
+    {.mnemonic = Mnemonic::OR, .destination = OperandCode::Eb, .source = OperandCode::Gb, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::OR, .destination = OperandCode::Ev, .source = OperandCode::Gv, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::OR, .destination = OperandCode::Gb, .source = OperandCode::Eb, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::OR, .destination = OperandCode::Gv, .source = OperandCode::Ev, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
     {.mnemonic = Mnemonic::OR, .destination = OperandCode::AL, .source = OperandCode::Ib},
     {.mnemonic = Mnemonic::OR, .destination = OperandCode::rAX, .source = OperandCode::Iz},
     {.mnemonic = Mnemonic::PUSH, .destination = OperandCode::CS, .source = OperandCode::None},
@@ -51,10 +51,10 @@ static constexpr InstructionDesc OPCODE_TABLE[256] = {
     {.mnemonic = Mnemonic::ESCAPE_2BYTE, .destination = OperandCode::None, .source = OperandCode::None},
 
     // 0x10
-    {.mnemonic = Mnemonic::ADC, .destination = OperandCode::Eb, .source = OperandCode::Gb, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::ADC, .destination = OperandCode::Ev, .source = OperandCode::Gv, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::ADC, .destination = OperandCode::Gb, .source = OperandCode::Eb, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::ADC, .destination = OperandCode::Gv, .source = OperandCode::Ev, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
+    {.mnemonic = Mnemonic::ADC, .destination = OperandCode::Eb, .source = OperandCode::Gb, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::ADC, .destination = OperandCode::Ev, .source = OperandCode::Gv, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::ADC, .destination = OperandCode::Gb, .source = OperandCode::Eb, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::ADC, .destination = OperandCode::Gv, .source = OperandCode::Ev, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
     {.mnemonic = Mnemonic::ADC, .destination = OperandCode::AL, .source = OperandCode::Ib},
     {.mnemonic = Mnemonic::ADC, .destination = OperandCode::rAX, .source = OperandCode::Iz},
     {.mnemonic = Mnemonic::PUSH, .destination = OperandCode::SS, .source = OperandCode::None},
@@ -62,10 +62,10 @@ static constexpr InstructionDesc OPCODE_TABLE[256] = {
     {.mnemonic = Mnemonic::POP, .destination = OperandCode::SS, .source = OperandCode::None},
 
     // 0x18
-    {.mnemonic = Mnemonic::SBB, .destination = OperandCode::Eb, .source = OperandCode::Gb, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::SBB, .destination = OperandCode::Ev, .source = OperandCode::Gv, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::SBB, .destination = OperandCode::Gb, .source = OperandCode::Eb, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::SBB, .destination = OperandCode::Gv, .source = OperandCode::Ev, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
+    {.mnemonic = Mnemonic::SBB, .destination = OperandCode::Eb, .source = OperandCode::Gb, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::SBB, .destination = OperandCode::Ev, .source = OperandCode::Gv, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::SBB, .destination = OperandCode::Gb, .source = OperandCode::Eb, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::SBB, .destination = OperandCode::Gv, .source = OperandCode::Ev, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
     {.mnemonic = Mnemonic::SBB, .destination = OperandCode::AL, .source = OperandCode::Ib},
     {.mnemonic = Mnemonic::SBB, .destination = OperandCode::rAX, .source = OperandCode::Iz},
     // only valid in amd64 mode
@@ -74,10 +74,10 @@ static constexpr InstructionDesc OPCODE_TABLE[256] = {
     {.mnemonic = Mnemonic::POP, .destination = OperandCode::DS, .source = OperandCode::None},
 
     // 0x20
-    {.mnemonic = Mnemonic::AND, .destination = OperandCode::Eb, .source = OperandCode::Gb, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::AND, .destination = OperandCode::Ev, .source = OperandCode::Gv, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::AND, .destination = OperandCode::Gb, .source = OperandCode::Eb, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::AND, .destination = OperandCode::Gv, .source = OperandCode::Ev, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
+    {.mnemonic = Mnemonic::AND, .destination = OperandCode::Eb, .source = OperandCode::Gb, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::AND, .destination = OperandCode::Ev, .source = OperandCode::Gv, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::AND, .destination = OperandCode::Gb, .source = OperandCode::Eb, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::AND, .destination = OperandCode::Gv, .source = OperandCode::Ev, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
     {.mnemonic = Mnemonic::AND, .destination = OperandCode::AL, .source = OperandCode::Ib},
     {.mnemonic = Mnemonic::AND, .destination = OperandCode::rAX, .source = OperandCode::Iz},
     {.mnemonic = Mnemonic::SEG_ES, .destination = OperandCode::None, .source = OperandCode::None},
@@ -85,10 +85,10 @@ static constexpr InstructionDesc OPCODE_TABLE[256] = {
     {.mnemonic = Mnemonic::DAA, .destination = OperandCode::None, .source = OperandCode::None},
 
     // 0x28
-    {.mnemonic = Mnemonic::SUB, .destination = OperandCode::Eb, .source = OperandCode::Gb, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::SUB, .destination = OperandCode::Ev, .source = OperandCode::Gv, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::SUB, .destination = OperandCode::Gb, .source = OperandCode::Eb, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::SUB, .destination = OperandCode::Gv, .source = OperandCode::Ev, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
+    {.mnemonic = Mnemonic::SUB, .destination = OperandCode::Eb, .source = OperandCode::Gb, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::SUB, .destination = OperandCode::Ev, .source = OperandCode::Gv, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::SUB, .destination = OperandCode::Gb, .source = OperandCode::Eb, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::SUB, .destination = OperandCode::Gv, .source = OperandCode::Ev, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
     {.mnemonic = Mnemonic::SUB, .destination = OperandCode::AL, .source = OperandCode::Ib},
     {.mnemonic = Mnemonic::SUB, .destination = OperandCode::rAX, .source = OperandCode::Iz},
     {.mnemonic = Mnemonic::SEG_CS, .destination = OperandCode::None, .source = OperandCode::None},
@@ -97,10 +97,10 @@ static constexpr InstructionDesc OPCODE_TABLE[256] = {
     {.mnemonic = Mnemonic::DAS, .destination = OperandCode::None, .source = OperandCode::None},
 
     // 0x30
-    {.mnemonic = Mnemonic::XOR, .destination = OperandCode::Eb, .source = OperandCode::Gb, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::XOR, .destination = OperandCode::Ev, .source = OperandCode::Gv, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::XOR, .destination = OperandCode::Gb, .source = OperandCode::Eb, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::XOR, .destination = OperandCode::Gv, .source = OperandCode::Ev, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
+    {.mnemonic = Mnemonic::XOR, .destination = OperandCode::Eb, .source = OperandCode::Gb, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::XOR, .destination = OperandCode::Ev, .source = OperandCode::Gv, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::XOR, .destination = OperandCode::Gb, .source = OperandCode::Eb, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::XOR, .destination = OperandCode::Gv, .source = OperandCode::Ev, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
     {.mnemonic = Mnemonic::XOR, .destination = OperandCode::AL, .source = OperandCode::Ib},
     {.mnemonic = Mnemonic::XOR, .destination = OperandCode::rAX, .source = OperandCode::Iz},
     {.mnemonic = Mnemonic::SEG_SS, .destination = OperandCode::None, .source = OperandCode::None},
@@ -108,10 +108,10 @@ static constexpr InstructionDesc OPCODE_TABLE[256] = {
     {.mnemonic = Mnemonic::AAA, .destination = OperandCode::None, .source = OperandCode::None},
 
     // 0x38
-    {.mnemonic = Mnemonic::CMP, .destination = OperandCode::Eb, .source = OperandCode::Gb, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::CMP, .destination = OperandCode::Ev, .source = OperandCode::Gv, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::CMP, .destination = OperandCode::Gb, .source = OperandCode::Eb, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::CMP, .destination = OperandCode::Gv, .source = OperandCode::Ev, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
+    {.mnemonic = Mnemonic::CMP, .destination = OperandCode::Eb, .source = OperandCode::Gb, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::CMP, .destination = OperandCode::Ev, .source = OperandCode::Gv, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::CMP, .destination = OperandCode::Gb, .source = OperandCode::Eb, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::CMP, .destination = OperandCode::Gv, .source = OperandCode::Ev, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
     {.mnemonic = Mnemonic::CMP, .destination = OperandCode::AL, .source = OperandCode::Ib},
     {.mnemonic = Mnemonic::CMP, .destination = OperandCode::rAX, .source = OperandCode::Iz},
     {.mnemonic = Mnemonic::SEG_CS, .destination = OperandCode::None, .source = OperandCode::None},
@@ -182,9 +182,9 @@ static constexpr InstructionDesc OPCODE_TABLE[256] = {
     // 0x60
     {.mnemonic = Mnemonic::PUSHAD, .destination = OperandCode::None, .source = OperandCode::None},
     {.mnemonic = Mnemonic::POPAD, .destination = OperandCode::None, .source = OperandCode::None},
-    {.mnemonic = Mnemonic::BOUND, .destination = OperandCode::Gv, .source = OperandCode::Ma, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
+    {.mnemonic = Mnemonic::BOUND, .destination = OperandCode::Gv, .source = OperandCode::Ma, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
     // note only valid in amd64 in intel32 mode its ARPL i am focusing mainly on AMD64
-    {.mnemonic = Mnemonic::MOVSXD, .destination = OperandCode::Gv, .source = OperandCode::Ev, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
+    {.mnemonic = Mnemonic::MOVSXD, .destination = OperandCode::Gv, .source = OperandCode::Ev, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
     // SEG = FS (Prefix)
     {.mnemonic = Mnemonic::SEG_FS, .destination = OperandCode::None, .source = OperandCode::None},
     {.mnemonic = Mnemonic::SEG_GS, .destination = OperandCode::None, .source = OperandCode::None},
@@ -195,19 +195,19 @@ static constexpr InstructionDesc OPCODE_TABLE[256] = {
 
     // 0x68
     {.mnemonic = Mnemonic::PUSH, .destination = OperandCode::Iz, .source = OperandCode::None},
-    {.mnemonic    = Mnemonic::IMUL,
-     .destination = OperandCode::Gv,
-     .source      = OperandCode::Ev,
-     .extra       = OperandCode::Iz,
-     .mod_rm      = true,
-     .reg_field   = mod_rmRegMode::Register},
+    {.mnemonic        = Mnemonic::IMUL,
+     .destination     = OperandCode::Gv,
+     .source          = OperandCode::Ev,
+     .extra           = OperandCode::Iz,
+     .has_mod_rm      = true,
+     .mod_rm_reg_mode = ModRmRegMode::Register},
     {.mnemonic = Mnemonic::PUSH, .destination = OperandCode::Ib, .source = OperandCode::None},
-    {.mnemonic    = Mnemonic::IMUL,
-     .destination = OperandCode::Gv,
-     .source      = OperandCode::Ev,
-     .extra       = OperandCode::Ib,
-     .mod_rm      = true,
-     .reg_field   = mod_rmRegMode::Register},
+    {.mnemonic        = Mnemonic::IMUL,
+     .destination     = OperandCode::Gv,
+     .source          = OperandCode::Ev,
+     .extra           = OperandCode::Ib,
+     .has_mod_rm      = true,
+     .mod_rm_reg_mode = ModRmRegMode::Register},
     {.mnemonic = Mnemonic::INS, .destination = OperandCode::Yb, .source = OperandCode::DX},
     {.mnemonic = Mnemonic::INS, .destination = OperandCode::Yz, .source = OperandCode::DX},
     {.mnemonic = Mnemonic::OUTS, .destination = OperandCode::DX, .source = OperandCode::Xb},
@@ -239,28 +239,28 @@ static constexpr InstructionDesc OPCODE_TABLE[256] = {
 
     // for GROUP1 Bits 5, 4, and 3 of ModR/M byte used as an opcode extension
     // 0x80
-    {.mnemonic = Mnemonic::GROUP1, .destination = OperandCode::Eb, .source = OperandCode::Ib, .mod_rm = true, .reg_field = mod_rmRegMode::OpcodeExtension},
-    {.mnemonic = Mnemonic::GROUP1, .destination = OperandCode::Ev, .source = OperandCode::Iz, .mod_rm = true, .reg_field = mod_rmRegMode::OpcodeExtension},
+    {.mnemonic = Mnemonic::GROUP1, .destination = OperandCode::Eb, .source = OperandCode::Ib, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::OpcodeExtension},
+    {.mnemonic = Mnemonic::GROUP1, .destination = OperandCode::Ev, .source = OperandCode::Iz, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::OpcodeExtension},
     // invalid in amd64
-    {.mnemonic = Mnemonic::GROUP1, .destination = OperandCode::Eb, .source = OperandCode::Ib, .mod_rm = true, .reg_field = mod_rmRegMode::OpcodeExtension},
-    {.mnemonic = Mnemonic::GROUP1, .destination = OperandCode::Ev, .source = OperandCode::Ib, .mod_rm = true, .reg_field = mod_rmRegMode::OpcodeExtension},
+    {.mnemonic = Mnemonic::GROUP1, .destination = OperandCode::Eb, .source = OperandCode::Ib, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::OpcodeExtension},
+    {.mnemonic = Mnemonic::GROUP1, .destination = OperandCode::Ev, .source = OperandCode::Ib, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::OpcodeExtension},
 
-    {.mnemonic = Mnemonic::TEST, .destination = OperandCode::Eb, .source = OperandCode::Gb, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::TEST, .destination = OperandCode::Ev, .source = OperandCode::Gv, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::XCHG, .destination = OperandCode::Eb, .source = OperandCode::Gb, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
+    {.mnemonic = Mnemonic::TEST, .destination = OperandCode::Eb, .source = OperandCode::Gb, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::TEST, .destination = OperandCode::Ev, .source = OperandCode::Gv, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::XCHG, .destination = OperandCode::Eb, .source = OperandCode::Gb, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
     // 0x87
-    {.mnemonic = Mnemonic::XCHG, .destination = OperandCode::Ev, .source = OperandCode::Gv, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
+    {.mnemonic = Mnemonic::XCHG, .destination = OperandCode::Ev, .source = OperandCode::Gv, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
 
     // 0x88
-    {.mnemonic = Mnemonic::MOV, .destination = OperandCode::Eb, .source = OperandCode::Gb, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::MOV, .destination = OperandCode::Ev, .source = OperandCode::Gv, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::MOV, .destination = OperandCode::Gb, .source = OperandCode::Eb, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::MOV, .destination = OperandCode::Gv, .source = OperandCode::Ev, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::MOV, .destination = OperandCode::Ev, .source = OperandCode::Sw, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::LEA, .destination = OperandCode::Gv, .source = OperandCode::M, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
-    {.mnemonic = Mnemonic::MOV, .destination = OperandCode::Sw, .source = OperandCode::Ew, .mod_rm = true, .reg_field = mod_rmRegMode::Register},
+    {.mnemonic = Mnemonic::MOV, .destination = OperandCode::Eb, .source = OperandCode::Gb, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::MOV, .destination = OperandCode::Ev, .source = OperandCode::Gv, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::MOV, .destination = OperandCode::Gb, .source = OperandCode::Eb, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::MOV, .destination = OperandCode::Gv, .source = OperandCode::Ev, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::MOV, .destination = OperandCode::Ev, .source = OperandCode::Sw, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::LEA, .destination = OperandCode::Gv, .source = OperandCode::M, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
+    {.mnemonic = Mnemonic::MOV, .destination = OperandCode::Sw, .source = OperandCode::Ew, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::Register},
     // 0x8F
-    {.mnemonic = Mnemonic::GROUP1A, .destination = OperandCode::Ev, .source = OperandCode::None, .mod_rm = true, .reg_field = mod_rmRegMode::OpcodeExtension},
+    {.mnemonic = Mnemonic::GROUP1A, .destination = OperandCode::Ev, .source = OperandCode::None, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::OpcodeExtension},
 
     // XCHG word, double-word or quad-word register with rAX
     // 0x90
@@ -338,8 +338,8 @@ static constexpr InstructionDesc OPCODE_TABLE[256] = {
 
     // Shift Group2^1A, 1A = Bits 5, 4, and 3 of MODR/M byte used as an opcode extension
     // 0xC0
-    {.mnemonic = Mnemonic::GROUP2, .destination = OperandCode::Eb, .source = OperandCode::Ib, .mod_rm = true, .reg_field = mod_rmRegMode::OpcodeExtension},
-    {.mnemonic = Mnemonic::GROUP2, .destination = OperandCode::Ev, .source = OperandCode::Ib, .mod_rm = true, .reg_field = mod_rmRegMode::OpcodeExtension},
+    {.mnemonic = Mnemonic::GROUP2, .destination = OperandCode::Eb, .source = OperandCode::Ib, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::OpcodeExtension},
+    {.mnemonic = Mnemonic::GROUP2, .destination = OperandCode::Ev, .source = OperandCode::Ib, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::OpcodeExtension},
 
     // near RET^f64, f64 = operand size is forced to 64-bit bit operand size when in AMD64 mode
     {.mnemonic = Mnemonic::RET, .destination = OperandCode::Iw, .source = OperandCode::None},
@@ -347,9 +347,9 @@ static constexpr InstructionDesc OPCODE_TABLE[256] = {
 
     {.mnemonic = Mnemonic::VEX2, .destination = OperandCode::None, .source = OperandCode::None},
     {.mnemonic = Mnemonic::VEX1, .destination = OperandCode::None, .source = OperandCode::None},
-    {.mnemonic = Mnemonic::GROUP11, .destination = OperandCode::Eb, .source = OperandCode::Ib, .mod_rm = true, .reg_field = mod_rmRegMode::OpcodeExtension},
+    {.mnemonic = Mnemonic::GROUP11, .destination = OperandCode::Eb, .source = OperandCode::Ib, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::OpcodeExtension},
     // 0xC7
-    {.mnemonic = Mnemonic::GROUP11, .destination = OperandCode::Ev, .source = OperandCode::Iz, .mod_rm = true, .reg_field = mod_rmRegMode::OpcodeExtension},
+    {.mnemonic = Mnemonic::GROUP11, .destination = OperandCode::Ev, .source = OperandCode::Iz, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::OpcodeExtension},
 
     // 0xC8
     {.mnemonic = Mnemonic::ENTER, .destination = OperandCode::Iw, .source = OperandCode::Ib},
@@ -363,10 +363,10 @@ static constexpr InstructionDesc OPCODE_TABLE[256] = {
     {.mnemonic = Mnemonic::IRET, .destination = OperandCode::None, .source = OperandCode::None},
 
     // 0xD0
-    {.mnemonic = Mnemonic::GROUP2, .destination = OperandCode::Eb, .source = OperandCode::One, .mod_rm = true, .reg_field = mod_rmRegMode::OpcodeExtension},
-    {.mnemonic = Mnemonic::GROUP2, .destination = OperandCode::Ev, .source = OperandCode::One, .mod_rm = true, .reg_field = mod_rmRegMode::OpcodeExtension},
-    {.mnemonic = Mnemonic::GROUP2, .destination = OperandCode::Eb, .source = OperandCode::CL, .mod_rm = true, .reg_field = mod_rmRegMode::OpcodeExtension},
-    {.mnemonic = Mnemonic::GROUP2, .destination = OperandCode::Ev, .source = OperandCode::CL, .mod_rm = true, .reg_field = mod_rmRegMode::OpcodeExtension},
+    {.mnemonic = Mnemonic::GROUP2, .destination = OperandCode::Eb, .source = OperandCode::One, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::OpcodeExtension},
+    {.mnemonic = Mnemonic::GROUP2, .destination = OperandCode::Ev, .source = OperandCode::One, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::OpcodeExtension},
+    {.mnemonic = Mnemonic::GROUP2, .destination = OperandCode::Eb, .source = OperandCode::CL, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::OpcodeExtension},
+    {.mnemonic = Mnemonic::GROUP2, .destination = OperandCode::Ev, .source = OperandCode::CL, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::OpcodeExtension},
     {.mnemonic = Mnemonic::INVALID, .destination = OperandCode::None, .source = OperandCode::None},
     {.mnemonic = Mnemonic::INVALID, .destination = OperandCode::None, .source = OperandCode::None},
     {.mnemonic = Mnemonic::INVALID, .destination = OperandCode::None, .source = OperandCode::None},
@@ -412,9 +412,9 @@ static constexpr InstructionDesc OPCODE_TABLE[256] = {
     {.mnemonic = Mnemonic::REP, .destination = OperandCode::None, .source = OperandCode::None},
     {.mnemonic = Mnemonic::HLT, .destination = OperandCode::None, .source = OperandCode::None},
     {.mnemonic = Mnemonic::CMC, .destination = OperandCode::None, .source = OperandCode::None},
-    {.mnemonic = Mnemonic::GROUP3, .destination = OperandCode::Eb, .source = OperandCode::None, .mod_rm = true, .reg_field = mod_rmRegMode::OpcodeExtension},
+    {.mnemonic = Mnemonic::GROUP3, .destination = OperandCode::Eb, .source = OperandCode::None, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::OpcodeExtension},
     // 0xF7
-    {.mnemonic = Mnemonic::GROUP3, .destination = OperandCode::Ev, .source = OperandCode::None, .mod_rm = true, .reg_field = mod_rmRegMode::OpcodeExtension},
+    {.mnemonic = Mnemonic::GROUP3, .destination = OperandCode::Ev, .source = OperandCode::None, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::OpcodeExtension},
 
     // 0xF8
     {.mnemonic = Mnemonic::CLC, .destination = OperandCode::None, .source = OperandCode::None},
@@ -423,14 +423,7 @@ static constexpr InstructionDesc OPCODE_TABLE[256] = {
     {.mnemonic = Mnemonic::STI, .destination = OperandCode::None, .source = OperandCode::None},
     {.mnemonic = Mnemonic::CLD, .destination = OperandCode::None, .source = OperandCode::None},
     {.mnemonic = Mnemonic::STD, .destination = OperandCode::None, .source = OperandCode::None},
-    {.mnemonic = Mnemonic::GROUP4, .destination = OperandCode::Eb, .source = OperandCode::None, .mod_rm = true, .reg_field = mod_rmRegMode::OpcodeExtension},
+    {.mnemonic = Mnemonic::GROUP4, .destination = OperandCode::Eb, .source = OperandCode::None, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::OpcodeExtension},
     // 0xFF
-    {.mnemonic = Mnemonic::GROUP5, .destination = OperandCode::Ev, .source = OperandCode::None, .mod_rm = true, .reg_field = mod_rmRegMode::OpcodeExtension},
+    {.mnemonic = Mnemonic::GROUP5, .destination = OperandCode::Ev, .source = OperandCode::None, .has_mod_rm = true, .mod_rm_reg_mode = ModRmRegMode::OpcodeExtension},
 };
-
-//constexpr bool Requiresmod_rm(OperandCode Code) noexcept
-//{
-//  return Code == OperandCode::Eb || Code == OperandCode::Ev || Code == OperandCode::Ew || Code == OperandCode::Gb
-//         || Code == OperandCode::Gv || Code == OperandCode::GS || Code == OperandCode::M || Code == OperandCode::Q
-//         || Code == OperandCode::W || Code == OperandCode::N || Code == OperandCode::Sw;
-//}

@@ -162,7 +162,7 @@ class Disassembler
 {
 public:
   explicit Disassembler(PEImage* image)
-      : image(image) {};
+      : image_(image) {};
 
   void disassemble() noexcept;
 
@@ -176,5 +176,5 @@ private:
   void build_mod_rm_instruction(const ModRM& mod_rm, const InstructionDesc& metadata, std::span<const std::byte>& bytes);
   void build_immediate_instruction(const InstructionDesc& metadata, std::span<const std::byte>& bytes);
 
-  PEImage* image = nullptr;
+  PEImage* image_ = nullptr;
 };

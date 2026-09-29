@@ -10,7 +10,7 @@ class PEParser
 {
 public:
   explicit PEParser(std::span<const std::byte> mapped_bytes)
-      : mapped_bytes(mapped_bytes) {};
+      : mapped_bytes_(mapped_bytes) {};
 
   [[nodiscard]] PeelResult<PEImage> parse();
 
@@ -23,5 +23,5 @@ private:
 
   std::vector<Import> parse_imports(std::span<const ImageSection> sections, ImageOptionalHeader& optional_header);
 
-  std::span<const std::byte> mapped_bytes{};
+  std::span<const std::byte> mapped_bytes_{};
 };

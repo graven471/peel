@@ -12,32 +12,24 @@
 0F 3A XX  -> 0F 3A opcode map
 */
 
-// signals this isn't a 1-byte opcode
-constexpr std::byte OPCODE_ESCAPE = std::byte{0x0F};
-// 0F 38 XX opcode map
-constexpr std::byte OPCODE_MAP2_SELECT = std::byte{0x38};
-// OF 3A XX opcode map
-constexpr std::byte OPCODE_MAP3_SELECT = std::byte{0x3A};
+constexpr std::byte opcode_escape      = std::byte{0x0F};
+constexpr std::byte opcode_map2_select = std::byte{0x38};
+constexpr std::byte opcode_map3_select = std::byte{0x3A};
 
-constexpr std::array<std::byte, 2> build_two_bytes_opcode(const std::byte Opcode) noexcept
+static constexpr std::array<std::byte, 2> make_two_byte_opcode(const std::byte opcode) noexcept
 {
-  return std::array{OPCODE_ESCAPE, Opcode};
+  return std::array{opcode_escape, opcode};
 }
 
-constexpr std::array<std::byte, 3> build_opcode_map2(const std::byte Opcode) noexcept
+static constexpr std::array<std::byte, 3> make_opcode_map2(const std::byte opcode) noexcept
 {
-  return std::array{OPCODE_ESCAPE, OPCODE_MAP2_SELECT, Opcode};
+  return std::array{opcode_escape, opcode_map2_select, opcode};
 }
 
-constexpr std::array<std::byte, 3> build_opcode_map3(const std::byte Opcode) noexcept
+static constexpr std::array<std::byte, 3> make_opcode_map3(const std::byte opcode) noexcept
 {
-  return std::array{OPCODE_ESCAPE, OPCODE_MAP3_SELECT, Opcode};
+  return std::array{opcode_escape, opcode_map3_select, opcode};
 }
-
-/*
-THANKS A LOT Intel For making all of these info available freely ^^
-Intel SDM Volume 2 Appendix A and B
-*/
 
 #define OPERAND_CODE_LIST(X)                                                                                           \
   X(None)                                                                                                              \

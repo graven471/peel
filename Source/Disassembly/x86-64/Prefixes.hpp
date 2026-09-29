@@ -11,8 +11,8 @@
  but each instruction can have less like 90 is 1-byte ix NOP
  so don't assume
 
-  AMD/INTEL 64 REX Prefix only for PE32+ images and note Not all instruction
-  require a REX prefix in 64-bit mode.
+ AMD/INTEL 64 REX Prefix only for PE32+ images and note Not all instruction
+ require a REX prefix in 64-bit mode.
 
  in AMD64 mode 15 bytes:
  [legacy prefixes]        max 4 bytes
@@ -26,64 +26,63 @@
  REX prefix is between 0x40-0x4F
 */
 
-constexpr std::array RexPrefix = {std::byte{0x40}, std::byte{0x41}, std::byte{0x42}, std::byte{0x43},
-                                  std::byte{0x44}, std::byte{0x45}, std::byte{0x46}, std::byte{0x47},
-                                  std::byte{0x48}, std::byte{0x49}, std::byte{0x4A}, std::byte{0x4B},
-                                  std::byte{0x4C}, std::byte{0x4D}, std::byte{0x4E}, std::byte{0x4F}};
+constexpr std::array rex_prefix = {std::byte{0x40}, std::byte{0x41}, std::byte{0x42}, std::byte{0x43},
+                                   std::byte{0x44}, std::byte{0x45}, std::byte{0x46}, std::byte{0x47},
+                                   std::byte{0x48}, std::byte{0x49}, std::byte{0x4A}, std::byte{0x4B},
+                                   std::byte{0x4C}, std::byte{0x4D}, std::byte{0x4E}, std::byte{0x4F}};
 
-constexpr std::array LegacyGroup1Prefixes = {std::byte{0xF0}, std::byte{0xF2}, std::byte{0xF3}};
+constexpr std::array legacy_group1_prefixes = {std::byte{0xF0}, std::byte{0xF2}, std::byte{0xF3}};
 
-constexpr std::array LegacyGroup2Prefixes = {std::byte{0x2E}, std::byte{0x36}, std::byte{0x3E},
-                                             std::byte{0x26}, std::byte{0x64}, std::byte{0x65}};
+constexpr std::array legacy_group2_prefixes = {std::byte{0x2E}, std::byte{0x36}, std::byte{0x3E},
+                                               std::byte{0x26}, std::byte{0x64}, std::byte{0x65}};
 
-constexpr std::byte LegacyGroup3Prefix = std::byte{0x66};
-constexpr std::byte LegacyGroup4Prefix = std::byte{0x67};
+constexpr std::byte legacy_group3_prefix = std::byte{0x66};
+constexpr std::byte legacy_group4_prefix = std::byte{0x67};
 
-enum class Prefixtype : std::uint8_t
+enum class PrefixType : std::uint8_t
 {
-  GROUP1,
-  GROUP2,
-  GROUP3,
-  GROUP4,
-  REX,
-  NONE
+  Group1,
+  Group2,
+  Group3,
+  Group4,
+  Rex,
+  None
 };
 
 struct PrefixMetadata
 {
-  Prefixtype type{Prefixtype::NONE};
-  bool       is_prefix{false};
+  PrefixType type{PrefixType::None};
 };
 
 static consteval std::array<PrefixMetadata, 256> build_prefix_table() noexcept
 {
   std::array<PrefixMetadata, 256> table{};
 
-  for(auto b : LegacyGroup1Prefixes)
+  for(auto byte : legacy_group1_prefixes)
   {
-    table[std::to_integer<std::uint8_t>(b)] = {.type = Prefixtype::GROUP1, .is_prefix = true};
+    table[std::to_integer<std::uint8_t>(byte)] = {.type = PrefixType::Group1};
   }
 
-  for(auto b : LegacyGroup2Prefixes)
+  for(auto byte : legacy_group2_prefixes)
   {
-    table[std::to_integer<std::uint8_t>(b)] = {.type = Prefixtype::GROUP2, .is_prefix = true};
+    table[std::to_integer<std::uint8_t>(byte)] = {.type = PrefixType::Group2};
   }
 
-  table[std::to_integer<std::uint8_t>(LegacyGroup3Prefix)] = {.type = Prefixtype::GROUP3, .is_prefix = true};
-  table[std::to_integer<std::uint8_t>(LegacyGroup4Prefix)] = {.type = Prefixtype::GROUP4, .is_prefix = true};
+  table[std::to_integer<std::uint8_t>(legacy_group3_prefix)] = {.type = PrefixType::Group3};
+  table[std::to_integer<std::uint8_t>(legacy_group4_prefix)] = {.type = PrefixType::Group4};
 
-  for(auto b : RexPrefix)
+  for(auto byte : rex_prefix)
   {
-    table[std::to_integer<std::uint8_t>(b)] = {.type = Prefixtype::REX, .is_prefix = true};
+    table[std::to_integer<std::uint8_t>(byte)] = {.type = PrefixType::Rex};
   }
 
   return table;
 }
 
-static constexpr std::array<PrefixMetadata, 256> PREFIX_TABLE = build_prefix_table();
+static constexpr std::array<PrefixMetadata, 256> prefix_table = build_prefix_table();
 
 // test data
 // 48 8B 44 8C 10 => MOV RAX, [RSP + RCX * 4 + 0x10]
-constexpr std::array<std::byte, 4> TestModRMOpcode{std::byte{0x8B}, std::byte{0x44}, std::byte{0x8C}, std::byte{0x10}};
+constexpr std::array<std::byte, 4> test_mod_rm_opcode = {std::byte{0x8B}, std::byte{0x44}, std::byte{0x8C}, std::byte{0x10}};
 
-inline auto TestBytesSpan = std::span{TestModRMOpcode};
+inline auto test_bytes_span = std::span{test_mod_rm_opcode};

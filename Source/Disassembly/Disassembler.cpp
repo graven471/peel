@@ -16,11 +16,11 @@ void Disassembler::disassemble() noexcept
 {
   constexpr std::array text_section_name{'.', 't', 'e', 'x', 't', '\0', '\0', '\0'};
 
-  auto it = std::ranges::find_if(image->SectionHeaders, [&](const ImageSection& section) {
+  auto it = std::ranges::find_if(image_->SectionHeaders, [&](const ImageSection& section) {
     return std::ranges::equal(section.Header.Name, text_section_name);
   });
 
-  if(it == image->SectionHeaders.end()) [[unlikely]]
+  if(it == image_->SectionHeaders.end()) [[unlikely]]
   {
     std::println(stderr, "no .text section is present");
     return;
@@ -34,9 +34,9 @@ void Disassembler::disassemble() noexcept
     scan_prefixes(text_bytes);
     OpcodeResult opcode = scan_opcode(text_bytes);
 
-    InstructionDesc opcode_metadata = OPCODE_TABLE[std::to_integer<std::uint8_t>(opcode.bytes[0])];
+    InstructionDesc opcode_metadata = opcode_table[std::to_integer<std::uint8_t>(opcode.bytes[0])];
 
-    if(opcode_metadata.mod_rm)
+    if(opcode_metadata.has_mod_rm)
     {
       const std::byte mod_rm_byte = text_bytes[0];
       ModRM           mod_rm      = scan_mod_rm(mod_rm_byte);
@@ -60,18 +60,17 @@ void Disassembler::scan_prefixes(std::span<const std::byte>& bytes)
 
   for(std::uint8_t index = 0; index < prefix_bytes.size(); ++index)
   {
-    auto meta = PREFIX_TABLE[std::to_integer<std::uint8_t>(prefix_bytes[index])];
+    auto metadata = prefix_table[std::to_integer<std::uint8_t>(prefix_bytes[index])];
 
-    if(meta.is_prefix)
+    if(metadata.type != PrefixType::None)
     {
-      prefixes[index] = PrefixMetadata{.type = meta.type, .is_prefix = true};
+      prefixes[index] = PrefixMetadata{.type = metadata.type};
 
       prefix_count++;
     }
     else
-    {
+
       break;
-    }
   }
 
   assert(prefix_count <= 5);
@@ -83,7 +82,7 @@ OpcodeResult Disassembler::scan_opcode(std::span<const std::byte>& bytes)
 {
   assert(!bytes.empty());
 
-  if(bytes[0] != OPCODE_ESCAPE)
+  if(bytes[0] != opcode_escape)
   {
     const std::byte opcode = bytes[0];
     bytes                  = bytes.subspan(1);
@@ -91,7 +90,7 @@ OpcodeResult Disassembler::scan_opcode(std::span<const std::byte>& bytes)
     return OpcodeResult{.bytes = {opcode, std::byte{0}, std::byte{0}}, .length = 1};
   }
 
-  if(bytes[1] == OPCODE_MAP2_SELECT || bytes[1] == OPCODE_MAP3_SELECT)
+  if(bytes[1] == opcode_map2_select || bytes[1] == opcode_map3_select)
   {
     assert(bytes.size() >= 3 &&
            "opcode contains OPCODE_MAP byte so Bytes must need to be atleast "
@@ -102,16 +101,15 @@ OpcodeResult Disassembler::scan_opcode(std::span<const std::byte>& bytes)
 
     bytes = bytes.subspan(3);
 
-    return OpcodeResult{.bytes = map == OPCODE_MAP2_SELECT ? build_opcode_map2(opcode) : build_opcode_map3(opcode), .length = 3};
+    return OpcodeResult{.bytes = map == opcode_map2_select ? make_opcode_map2(opcode) : make_opcode_map3(opcode), .length = 3};
   }
 
   assert(bytes.size() >= 2 &&
          "opcode contains OPCODE_ESCAPE bit so Bytes must need to be atleast "
          "2-bytes");
 
-  std::array<std::byte, 2> opcodes = build_two_bytes_opcode(bytes[1]);
-
-  bytes = bytes.subspan(2);
+  std::array<std::byte, 2> opcodes = make_two_byte_opcode(bytes[1]);
+  bytes                            = bytes.subspan(2);
 
   return OpcodeResult{.bytes = {opcodes[0], opcodes[1], std::byte{0x0}}, .length = 2};
 }
@@ -242,7 +240,7 @@ void Disassembler::build_mod_rm_instruction(const ModRM& mod_rm, const Instructi
   //std::println("{} {}, {}", mnemonic, destination_register,
   //             info.mode == ModRMMode::Register ? std::string{source_register} :
   //                                                // FIXME: dangling lifetime issue fix it
-  //                 effective_address.render_sib(OperandSize::Bits64, false, image->NTHeaders, mod_rm));
+  //                 effective_address.render_sib(OperandSize::Bits64, false, image_->NTHeaders, mod_rm));
 }
 
 void Disassembler::build_immediate_instruction(const InstructionDesc& metadata, std::span<const std::byte>& bytes)
