@@ -22,90 +22,92 @@
 #include "Disassembly/Disassembler.hpp"
 #include "Parser/Parser.hpp"
 
-[[nodiscard]] static PeelResult<std::span<const std::byte>> MapFile(const std::string& InFileName)
+[[nodiscard]] static PeelResult<std::span<const std::byte>> map_file(const std::string& file_name)
 {
   // use A prefix for now
-  HANDLE HFile = CreateFileA(InFileName.c_str(), GENERIC_READ, NULL, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_READONLY, NULL);
+  HANDLE file_handle = CreateFileA(file_name.c_str(), GENERIC_READ, NULL, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_READONLY, NULL);
 
-  if(HFile == INVALID_HANDLE_VALUE)
+  if(file_handle == INVALID_HANDLE_VALUE)
   {
     return std::unexpected(MakeWin32Error(::GetLastError()));
   }
 
   // get the file size
-  LARGE_INTEGER FileSize;
+  LARGE_INTEGER file_size;
 
-  if(GetFileSizeEx(HFile, &FileSize) == 0)
+  if(GetFileSizeEx(file_handle, &file_size) == 0)
   {
     return std::unexpected(MakeWin32Error(::GetLastError()));
   }
 
   // create file mapping aka describing backing store
-  HANDLE HMapping = CreateFileMapping(HFile, NULL, PAGE_READONLY, 0, 0, NULL);
+  HANDLE file_mapping = CreateFileMapping(file_handle, NULL, PAGE_READONLY, 0, 0, NULL);
 
-  if(HMapping == NULL)
+  if(file_mapping == NULL)
   {
-    CloseHandle(HFile);
+    CloseHandle(file_handle);
     return std::unexpected(MakeWin32Error(::GetLastError()));
   }
 
   // CreateFileMapping keeps the mapping alive internally
-  CloseHandle(HFile);
+  CloseHandle(file_handle);
 
   // map the file contents into this process virtual address space
-  LPVOID BasePtr = MapViewOfFile(HMapping, FILE_MAP_READ, 0, 0, 0);
+  LPVOID base_ptr = MapViewOfFile(file_mapping, FILE_MAP_READ, 0, 0, 0);
 
-  if(BasePtr == NULL)
+  if(base_ptr == NULL)
   {
     return std::unexpected(MakeWin32Error(::GetLastError()));
   }
 
-  return std::span<const std::byte>{static_cast<const std::byte*>(BasePtr), static_cast<std::size_t>(FileSize.QuadPart)};
+  return std::span<const std::byte>{static_cast<const std::byte*>(base_ptr), static_cast<std::size_t>(file_size.QuadPart)};
 }
 
 int main(int argc, const char* argv[])
 {
-  if(argc < 2)
+  //if(argc < 2)
+  //{
+  //  std::println(stderr, "Usage: peel <file.exe>");
+  //  return EXIT_FAILURE;
+  //}
+
+  //std::string file_name = argv[1];
+
+  //if(!file_name.ends_with("exe"))
+  //{
+  //  std::println(stderr, "invalid format");
+  //  return EXIT_FAILURE;
+  //}
+
+  //std::println("filename: {}", file_name);
+
+  std::string file_name = "C:\\Windows\\System32\\MRT.exe";
+
+  PeelResult<std::span<const std::byte>> mapping = map_file(file_name);
+
+  if(!mapping)
   {
-    std::println(stderr, "Usage: peel <file.exe>");
+    std::println(stderr, "\033[31mError: \033[0m {}", mapping.error().ToString());
+
     return EXIT_FAILURE;
   }
 
-  std::string FileName = argv[1];
+  PEParser parser{*mapping};
 
-  if(!FileName.ends_with("exe"))
+  PeelResult<PEImage> image = parser.Parse();
+
+  if(!image)
   {
-    std::println(stderr, "PE format is required");
+    std::println(stderr, "\033[31mError: \033[0m {}", image.error().ToString());
+
     return EXIT_FAILURE;
   }
 
-  std::println("filename: {}", FileName);
-
-  //std::string test = "C:\\Windows\\System32\\MRT.exe";
-
-  PeelResult<std::span<const std::byte>> Mapping = MapFile(FileName);
-
-  if(!Mapping)
-  {
-    std::println(stderr, "\033[31mError: \033[0m {}", Mapping.error().ToString());
-    return EXIT_FAILURE;
-  }
-
-  PEParser Parser{*Mapping};
-
-  PeelResult<PEImage> Image = Parser.Parse();
-
-  if(!Image)
-  {
-    std::println(stderr, "\033[31mError: \033[0m {}", Image.error().ToString());
-    return EXIT_FAILURE;
-  }
-
-  Disassembler Disas{&*Image};
+  Disassembler disassembler{&*image};
 
   //for(std::size_t i = 0; i < 10'000; ++i)
   //{
-  Disas.DoIt();
+  disassembler.do_it();
   //}
 
   return EXIT_SUCCESS;

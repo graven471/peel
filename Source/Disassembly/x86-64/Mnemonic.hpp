@@ -132,7 +132,7 @@ enum class Mnemonic : std::uint16_t
 #undef X
 };
 
-constexpr std::string_view ToString(Mnemonic Value) noexcept
+constexpr std::string_view to_string(Mnemonic Value) noexcept
 {
   switch(Value)
   {

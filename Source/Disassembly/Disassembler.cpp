@@ -12,55 +12,55 @@
 #include "x86-64/Registers.hpp"
 #include "x86-64/Types.hpp"
 
-void Disassembler::DoIt()
+void Disassembler::do_it()
 {
-  constexpr std::array TextSectionName{'.', 't', 'e', 'x', 't', '\0', '\0', '\0'};
+  constexpr std::array text_section_name{'.', 't', 'e', 'x', 't', '\0', '\0', '\0'};
 
-  auto It = std::ranges::find_if(Image->SectionHeaders, [&](const ImageSection& Section) {
-    return std::ranges::equal(Section.Header.Name, TextSectionName);
+  auto it = std::ranges::find_if(image->SectionHeaders, [&](const ImageSection& section) {
+    return std::ranges::equal(section.Header.Name, text_section_name);
   });
 
-  if(It == Image->SectionHeaders.end()) [[unlikely]]
+  if(it == image->SectionHeaders.end()) [[unlikely]]
   {
     std::println(stderr, "no .text section is present");
     return;
   }
 
-  ImageSection& TextSection = *It;
+  ImageSection& text_section = *it;
 
-  std::span<const std::byte> InstructionEncoding = TextSection.Data;
+  std::span<const std::byte> instruction_encoding = text_section.Data;
 
-  //std::span<const std::byte> InstructionEncoding = TestBytesSpan;
+  //std::span<const std::byte> instruction_encoding = test_bytes_span;
 
-  while(!InstructionEncoding.empty())
+  while(!instruction_encoding.empty())
   {
-    PrefixScanner(InstructionEncoding);
-    OpcodeResult Opcode = OpcodeScanner(InstructionEncoding);
+    prefix_scanner(instruction_encoding);
+    OpcodeResult opcode = opcode_scanner(instruction_encoding);
 
-    InstructionDesc OpcodeMetadata = OPCODE_TABLE[std::to_integer<std::uint8_t>(Opcode.Bytes[0])];
+    InstructionDesc opcode_metadata = OPCODE_TABLE[std::to_integer<std::uint8_t>(opcode.bytes[0])];
 
-    if(OpcodeMetadata.ModRM)
+    if(opcode_metadata.mod_rm)
     {
-      const std::byte ModRMByte = InstructionEncoding[0];
+      const std::byte mod_rm_byte = instruction_encoding[0];
 
-      ModRM ModRM         = ModRMScanner(ModRMByte);
-      InstructionEncoding = InstructionEncoding.subspan(1);
+      ModRM mod_rm         = mod_rm_scanner(mod_rm_byte);
+      instruction_encoding = instruction_encoding.subspan(1);
 
-      BuildModRMInstruction(ModRM, OpcodeMetadata, InstructionEncoding);
+      build_mod_rm_instruction(mod_rm, opcode_metadata, instruction_encoding);
     }
     else
     {
-      build_immediate_instruction(OpcodeMetadata, InstructionEncoding);
+      build_immediate_instruction(opcode_metadata, instruction_encoding);
     }
   }
 }
 
-void Disassembler::PrefixScanner(std::span<const std::byte>& Bytes)
+void Disassembler::prefix_scanner(std::span<const std::byte>& bytes)
 {
-  auto                          prefix_bytes = Bytes.first(std::min<std::size_t>(5, Bytes.size()));
+  auto prefix_bytes = bytes.first(std::min<std::size_t>(5, bytes.size()));
+
   std::uint8_t                  prefix_count{0};
   std::array<PrefixMetadata, 5> prefixes{};
-
 
   for(std::uint8_t index = 0; index < prefix_bytes.size(); ++index)
   {
@@ -68,7 +68,8 @@ void Disassembler::PrefixScanner(std::span<const std::byte>& Bytes)
 
     if(meta.is_prefix)
     {
-      prefixes[index] = PrefixMetadata{.Type = meta.Type, .is_prefix = true};
+      prefixes[index] = PrefixMetadata{.type = meta.type, .is_prefix = true};
+
       prefix_count++;
     }
     else
@@ -79,52 +80,47 @@ void Disassembler::PrefixScanner(std::span<const std::byte>& Bytes)
 
   assert(prefix_count <= 5);
 
-  Bytes = Bytes.subspan(prefix_count);
+  bytes = bytes.subspan(prefix_count);
 }
 
-OpcodeResult Disassembler::OpcodeScanner(std::span<const std::byte>& Bytes)
+OpcodeResult Disassembler::opcode_scanner(std::span<const std::byte>& bytes)
 {
-  assert(!Bytes.empty());
+  assert(!bytes.empty());
 
-  if(Bytes[0] != OPCODE_ESCAPE)
+  if(bytes[0] != OPCODE_ESCAPE)
   {
-    const std::byte Opcode = Bytes[0];
+    const std::byte opcode = bytes[0];
+    bytes                  = bytes.subspan(1);
 
-    // slide instruction
-    Bytes = Bytes.subspan(1);
-    return OpcodeResult{.Bytes = {Opcode, std::byte{0}, std::byte{0}}, .Length = 1};
+    return OpcodeResult{.bytes = {opcode, std::byte{0}, std::byte{0}}, .length = 1};
   }
 
-  if(Bytes[1] == OPCODE_MAP2_SELECT || Bytes[1] == OPCODE_MAP3_SELECT)
+  if(bytes[1] == OPCODE_MAP2_SELECT || bytes[1] == OPCODE_MAP3_SELECT)
   {
-    assert(Bytes.size() >= 3 &&
+    assert(bytes.size() >= 3 &&
            "opcode contains OPCODE_MAP byte so Bytes must need to be atleast "
            "3-bytes");
 
-    // get the view to opcodes and slide bytes so it can point to after opcode
-    const std::byte Map    = Bytes[1];
-    const std::byte Opcode = Bytes[2];
-    Bytes                  = Bytes.subspan(3);
+    const std::byte map    = bytes[1];
+    const std::byte opcode = bytes[2];
 
-    // 0x0F variant(0x38, 0x3A), XX
-    return OpcodeResult{.Bytes = Map == OPCODE_MAP2_SELECT ? BuildOpcodeMap2(Opcode) : BuildOpcodeMap3(Opcode), .Length = 3};
+    bytes = bytes.subspan(3);
+
+    return OpcodeResult{.bytes = map == OPCODE_MAP2_SELECT ? build_opcode_map2(opcode) : build_opcode_map3(opcode), .length = 3};
   }
 
-  assert(Bytes.size() >= 2 &&
+  assert(bytes.size() >= 2 &&
          "opcode contains OPCODE_ESCAPE bit so Bytes must need to be atleast "
          "2-bytes");
 
-  // now here we know that there is opcode map and bytes[0] is opcode_escape
-  // so opcode is 2-bytes store that and return Bytes.subspan(2)
+  std::array<std::byte, 2> opcodes = build_two_bytes_opcode(bytes[1]);
 
-  std::array<std::byte, 2> Opcodes = BuildTwoBytesOpcode(Bytes[1]);
-  Bytes                            = Bytes.subspan(2);
+  bytes = bytes.subspan(2);
 
-  // 0x0F XX
-  return OpcodeResult{.Bytes = {Opcodes[0], Opcodes[1], std::byte{0x0}}, .Length = 2};
+  return OpcodeResult{.bytes = {opcodes[0], opcodes[1], std::byte{0x0}}, .length = 2};
 }
 
-ModRM Disassembler::ModRMScanner(const std::byte Byte)
+ModRM Disassembler::mod_rm_scanner(const std::byte byte)
 {
   /*
     example: 11 001 100
@@ -132,56 +128,57 @@ ModRM Disassembler::ModRMScanner(const std::byte Byte)
             mod  reg  r/m
   */
 
-  const std::uint8_t Value = std::to_integer<std::uint8_t>(Byte);
+  const std::uint8_t value = std::to_integer<std::uint8_t>(byte);
 
-  const std::uint8_t Mod = (Value & 0xC0) >> 6;
-  const std::uint8_t Reg = (Value & 0x38) >> 3;
-  const std::uint8_t Rm  = Value & 0x07;
+  const std::uint8_t mod = (value & 0xC0) >> 6;
+  const std::uint8_t reg = (value & 0x38) >> 3;
+  const std::uint8_t rm  = value & 0x07;
 
-  return ModRM{.Mod = Mod, .Reg = Reg, .Rm = Rm};
+  return ModRM{.mod = mod, .reg = reg, .rm = rm};
 }
 
-ModRMOperandInfo Disassembler::ResolveModRM(const ModRM& ModRm, const InstructionDesc& MetaData)
+ModRMOperandInfo Disassembler::resolve_mod_rm(const ModRM& mod_rm, const InstructionDesc& metadata)
 {
-  struct ModRMOperandInfo Info{};
+  struct ModRMOperandInfo info{};
 
   // todo: replace operand size with REX.W prefix check
-  Info.Rm  = ResolveRegister(ModRm.Rm, OperandSize::Bits64);
-  Info.Reg = ResolveRegister(ModRm.Reg, OperandSize::Bits64);
+  info.rm = resolve_gp_register(mod_rm.rm, OperandSize::Bits64);
 
-  if(MetaData.Destination == OperandCode::Ev && MetaData.Source == OperandCode::Gv)
+  info.reg = resolve_gp_register(mod_rm.reg, OperandSize::Bits64);
+
+  if(metadata.destination == OperandCode::Ev && metadata.source == OperandCode::Gv)
   {
-    Info.Destination = ModRMField::Rm;
-    Info.Source      = ModRMField::Reg;
+    info.destination = ModRMField::Rm;
+    info.source      = ModRMField::Reg;
   }
-  else if(MetaData.Destination == OperandCode::Gv && MetaData.Source == OperandCode::Ev)
+  else if(metadata.destination == OperandCode::Gv && metadata.source == OperandCode::Ev)
   {
-    Info.Destination = ModRMField::Reg;
-    Info.Source      = ModRMField::Rm;
+    info.destination = ModRMField::Reg;
+    info.source      = ModRMField::Rm;
   }
   else
   {
     // generic fallback for now
-    Info.Destination = ModRMField::Reg;
-    Info.Source      = ModRMField::Rm;
+    info.destination = ModRMField::Reg;
+    info.source      = ModRMField::Rm;
   }
 
-  switch(static_cast<ModRMMode>(ModRm.Mod))
+  switch(static_cast<ModRMMode>(mod_rm.mod))
   {
     case ModRMMode::Register:
-      Info.Mode = ModRMMode::Register;
+      info.mode = ModRMMode::Register;
       break;
 
     case ModRMMode::MemoryNoDisplacement:
-      Info.Mode = ModRMMode::MemoryNoDisplacement;
+      info.mode = ModRMMode::MemoryNoDisplacement;
       break;
 
     case ModRMMode::MemoryDisp8:
-      Info.Mode = ModRMMode::MemoryDisp8;
+      info.mode = ModRMMode::MemoryDisp8;
       break;
 
     case ModRMMode::MemoryDisp32:
-      Info.Mode = ModRMMode::MemoryDisp32;
+      info.mode = ModRMMode::MemoryDisp32;
       break;
 
     default:
@@ -189,65 +186,75 @@ ModRMOperandInfo Disassembler::ResolveModRM(const ModRM& ModRm, const Instructio
       std::unreachable();
   }
 
-  return Info;
+  return info;
 }
 
-SIB Disassembler::GetSibFromByte(std::uint8_t Byte, std::uint8_t mod)
+SIB Disassembler::get_sib_from_byte(std::uint8_t byte, std::uint8_t mod)
 {
   return SIB{
-      .Scale = static_cast<std::int8_t>((Byte >> 6) & 0x03),
-      .Index = static_cast<std::int8_t>(((Byte >> 3) & 0x07) == 0b100 ? -1 : (Byte >> 3) & 0x07),
-      .Base  = static_cast<std::int8_t>(((Byte & 0x07) == 0b101 && mod == 0) ? -1 : Byte & 0x07),
+      .scale = static_cast<std::int8_t>((byte >> 6) & 0x03),
+      .index = static_cast<std::int8_t>(((byte >> 3) & 0x07) == 0b100 ? -1 : (byte >> 3) & 0x07),
+      .base  = static_cast<std::int8_t>(((byte & 0x07) == 0b101 && mod == 0) ? -1 : byte & 0x07),
   };
 }
 
-void Disassembler::BuildModRMInstruction(const ModRM& ModRm, const InstructionDesc& MetaData, std::span<const std::byte>& Bytes)
+void Disassembler::build_mod_rm_instruction(const ModRM& mod_rm, const InstructionDesc& metadata, std::span<const std::byte>& bytes)
 {
-  ModRMOperandInfo Info     = ResolveModRM(ModRm, MetaData);
-  std::string_view Mnemonic = ToString(MetaData.mnemonic);
+  ModRMOperandInfo info = resolve_mod_rm(mod_rm, metadata);
+
+  std::string_view mnemonic = to_string(metadata.mnemonic);
 
   auto build_base_address = [&]() -> EffectiveAddress {
     EffectiveAddress effective_address{};
 
     // sib exists iff mod != register and rm = 100
-    if(Info.Mode != ModRMMode::Register && ModRm.Rm == 4)
+    if(info.mode != ModRMMode::Register && mod_rm.rm == 4)
     {
       std::uint8_t sib_byte{};
-      std::memcpy(&sib_byte, Bytes.data(), sizeof(sib_byte));
-      Bytes                 = Bytes.subspan(sizeof(sib_byte));
-      effective_address.sib = GetSibFromByte(sib_byte, ModRm.Mod);
+
+      std::memcpy(&sib_byte, bytes.data(), sizeof(sib_byte));
+
+      bytes = bytes.subspan(sizeof(sib_byte));
+
+      effective_address.sib = get_sib_from_byte(sib_byte, mod_rm.mod);
     }
 
-    if(Info.Mode == ModRMMode::MemoryDisp8)
+    if(info.mode == ModRMMode::MemoryDisp8)
     {
       std::int8_t disp{};
-      std::memcpy(&disp, Bytes.data(), sizeof(std::int8_t));
-      Bytes                          = Bytes.subspan(sizeof(std::int8_t));
+
+      std::memcpy(&disp, bytes.data(), sizeof(std::int8_t));
+
+      bytes = bytes.subspan(sizeof(std::int8_t));
+
       effective_address.displacement = disp;
     }
-    else if(Info.Mode == ModRMMode::MemoryDisp32)
+    else if(info.mode == ModRMMode::MemoryDisp32)
     {
-      std::memcpy(&effective_address.displacement, Bytes.data(), sizeof(std::int32_t));
-      Bytes = Bytes.subspan(sizeof(std::int32_t));
+      std::memcpy(&effective_address.displacement, bytes.data(), sizeof(std::int32_t));
+
+      bytes = bytes.subspan(sizeof(std::int32_t));
     }
 
     return effective_address;
   };
 
-  std::string_view SourceRegister      = Info.Source == ModRMField::Rm ? ToString(Info.Rm) : ToString(Info.Reg);
-  std::string_view DestinationRegister = Info.Destination == ModRMField::Rm ? ToString(Info.Rm) : ToString(Info.Reg);
-  EffectiveAddress effective_address   = build_base_address();
+  std::string_view source_register = info.source == ModRMField::Rm ? to_string(info.rm) : to_string(info.reg);
 
-  std::println("{} {}, {}", Mnemonic, DestinationRegister,
-               Info.Mode == ModRMMode::Register ? std::string{SourceRegister} :
-                                                  // FIXME: dangling lifetime issue fix it
-                   effective_address.render_sib(OperandSize::Bits64, false, Image->NTHeaders, ModRm));
+  std::string_view destination_register = info.destination == ModRMField::Rm ? to_string(info.rm) : to_string(info.reg);
+
+  EffectiveAddress effective_address = build_base_address();
+
+  //std::println("{} {}, {}", mnemonic, destination_register,
+  //             info.mode == ModRMMode::Register ? std::string{source_register} :
+  //                                                // FIXME: dangling lifetime issue fix it
+  //                 effective_address.render_sib(OperandSize::Bits64, false, image->NTHeaders, mod_rm));
 }
 
 void Disassembler::build_immediate_instruction(const InstructionDesc& metadata, std::span<const std::byte>& bytes)
 {
-  if(metadata.Destination == OperandCode::Iv || metadata.Destination == OperandCode::Iz || metadata.Source == OperandCode::Ib
-     || metadata.Source == OperandCode::Iv || metadata.Source == OperandCode::Iz || metadata.Source == OperandCode::Ib) [[likely]]
+  if(metadata.destination == OperandCode::Iv || metadata.destination == OperandCode::Iz || metadata.source == OperandCode::Ib
+     || metadata.source == OperandCode::Iv || metadata.source == OperandCode::Iz || metadata.source == OperandCode::Ib) [[likely]]
   {
     //std::println("imm: {:x}", std::to_integer<uint8_t>(bytes[0]));
   }

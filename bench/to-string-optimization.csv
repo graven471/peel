@@ -1,0 +1,136 @@
+
+"AMD uProf (Version:5.3.521.0)"
+PERFORMANCE ANALYSIS REPORT
+
+EXECUTION
+Target Path:,"C:\Users\s1mple\dev\cpp\pe-visualizer\x64\Release\pe-visualizer.exe"
+Command Line Arguments:
+Working Directory:,"C:\Users\s1mple"
+Environment Variables:
+CPU Details:,"Family(0x19), Model(0x50), Number of Cores(12)"
+Operating System:,"Win1125H2-64"
+Collect Command:,"AMDuProfCLI.exe collect -e event=pmcxc0,interval=250000 -e event=pmcx76,interval=250000 -e event=pmcxc2,interval=250000 -e event=pmcxc3,interval=250000 -e event=pmcx82,interval=250000 -o C:\Users\s1mple\prof_out C:\Users\s1mple\dev\cpp\pe-visualizer\x64\Release\pe-visualizer.exe"
+Report Command:,"AMDuProfCLI.exe report --detail -i C:\Users\s1mple\prof_out\AMDuProf-pe-visualizer-Custom_Sep-29-2026_17-17-11"
+
+PROFILE DETAILS
+Profile Session Type:,"Custom Profile"
+Profile Scope:,"Single Application"
+CPU Mask:,"0-11"
+CPU Affinity Mask:,"0-11"
+Profile Start Time:,"Tue Sep 29 17:17:11 2026"
+Profile End Time:,"Tue Sep 29 17:17:30 2026"
+Profile Duration:,"18.763 seconds"
+Data Folder:,"C:\Users\s1mple\prof_out\AMDuProf-pe-visualizer-Custom_Sep-29-2026_17-17-11"
+Virtual Machine:,"No"
+Call Stack Sampling:,"False"
+Selected View:,"All Events"
+
+MONITORED EVENTS
+PMC Events:,Name,Interval,Unitmask,Countmask,Invert Countmask,User,OS,Description
+,"CYCLES_NOT_IN_HALT (PMCx076)",250000,0x00,0x00,False,True,True,"The number of cpu cycles when the thread is not in halt state."
+,"IcCacheFillL2 (PMCx082)",250000,0x00,0x00,False,True,True,"The number of 64-byte instruction cache lines fulfilled from the L2 cache."
+,"RETIRED_INST (PMCx0C0)",250000,0x00,0x00,False,True,True,"The number of instructions retired from execution. This count includes exceptions and interrupts. Each exception or interrupt is counted as one instruction."
+,"RETIRED_BR_INST (PMCx0C2)",250000,0x00,0x00,False,True,True,"The number of branch instructions retired. This includes all types of architectural control flow changes, including exceptions and interrupts.
+            "
+,"RETIRED_BR_INST_MISP (PMCx0C3)",250000,0x00,0x00,False,True,True,"The number of retired branch instructions, that were mispredicted.Note that only EX direct mispredicts and indirect target mispredicts are counted.
+            "
+
+
+DERIVED METRICS
+Metric Name,Expression,Description
+"IPC","RETIRED_INST / CYCLES_NOT_IN_HALT","The average number of retired instructions per CPU Cycle. The lower IPC value means the application consumes more cycles due to  cache misses, branch mispredictions, pipeline stalls, I/O or any other performance bottlenecks."
+"CPI","CYCLES_NOT_IN_HALT / RETIRED_INST","The average number of CPU cycles consumed to retire an instruction. This metric is computed as the ratio of CYCLES_NOT_IN_HALT to RETIRED_INST event. The higher values means the application consumes more CPU cycles to retire an instruction due to high cache misses, branch mispredictions, pipeline stalls, I/O or any other bottlenecks. If the CPI values exceeds a threshold value, it will be highlighted in pink."
+"RETIRED_BR_INST (PTI)","( RETIRED_BR_INST * 1000 ) / RETIRED_INST","The number of retired branch instructions per thousand retired instructions."
+"RETIRED_BR_INST_MISP (PTI)","( RETIRED_BR_INST_MISP * 1000 ) / RETIRED_INST","The number of retired mispredicted branches per thousand retired instructions. Branch mispredictions incur significant performance penalty and this metric value should be reduced."
+"%RETIRED_BR_INST_MISP","( RETIRED_BR_INST_MISP * 100 ) / RETIRED_BR_INST","The percentage of retired mispredicted branches with respect to the total number of retired branches."
+"RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP / RETIRED_INST","This metric is computed as retired mispredicted branches divided by the total number of retired instructions."
+"RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_MISP / RETIRED_BR_INST","This metric is computed as retired mispredicted branches divided by the total number of retired branch instructions."
+"RETIRED_BR_INST_RATE","RETIRED_BR_INST / RETIRED_INST","The number of retired branch instructions rate. This metric is computed as retired branches divided by the total number of retired instructions."
+
+
+APPLICATION PERFORMANCE SNAPSHOT
+Thread Count,"5"
+
+
+"10 HOTTEST FUNCTIONS (Sort Event - CYCLES_NOT_IN_HALT)"
+FUNCTION,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","IcCacheFillL2","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE",Module
+"Disassembler::DoIt(void)",71.0000,105.0000,1.4789,0.6762,200.0000,9.5238,21.0000,1.0000,4.7619,0.0000,0.0095,0.0476,0.2000,"c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe"
+"ucrtbase.dll!0x1800b3d87",2.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,"c:\windows\system32\ucrtbase.dll"
+"ntdll.dll!0x18003acfb",1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,"c:\windows\system32\ntdll.dll"
+"ntdll.dll!0x18003b063",0.0000,1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,"c:\windows\system32\ntdll.dll"
+"ntdll.dll!0x18003ad04",0.0000,1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,"c:\windows\system32\ntdll.dll"
+"ntdll.dll!0x18003ac19",0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,"c:\windows\system32\ntdll.dll"
+
+"10 HOTTEST PROCESSES (Sort Event - CYCLES_NOT_IN_HALT)"
+PROCESS,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","IcCacheFillL2","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE"
+"c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe (PID:5396)",74.0000,107.0000,1.4459,0.6916,205.6075,9.3458,22.0000,1.0000,4.5455,0.0000,0.0093,0.0455,0.2056
+
+"10 HOTTEST MODULES (Sort Event - CYCLES_NOT_IN_HALT)"
+MODULE,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","IcCacheFillL2","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE"
+"c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe",71.0000,105.0000,1.4789,0.6762,200.0000,9.5238,21.0000,1.0000,4.7619,0.0000,0.0095,0.0476,0.2000
+"c:\windows\system32\ucrtbase.dll",2.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000
+"c:\windows\system32\ntdll.dll",1.0000,2.0000,2.0000,0.5000,500.0000,0.0000,1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.5000
+
+"10 HOTTEST THREADS (Sort Event - CYCLES_NOT_IN_HALT)"
+THREAD,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","IcCacheFillL2","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE",THREAD ID
+"Thread-13460 (PID:5396)",73.0000,105.0000,1.4384,0.6952,200.0000,9.5238,21.0000,1.0000,4.7619,0.0000,0.0095,0.0476,0.2000,"13460"
+"Thread-13192 (PID:5396)",1.0000,2.0000,2.0000,0.5000,500.0000,0.0000,1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.5000,"13192"
+
+"ALL PROCESSES (Sort Event - CYCLES_NOT_IN_HALT)"
+PROCESS,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","IcCacheFillL2","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE"
+"c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe (PID:5396)",74.0000,107.0000,1.4459,0.6916,205.6075,9.3458,22.0000,1.0000,4.5455,0.0000,0.0093,0.0455,0.2056
+
+
+PROFILE REPORT FOR PROCESS - c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe (PID:5396)
+PROCESS,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","IcCacheFillL2","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE"
+"c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe (PID:5396)",74.0000,107.0000,1.4459,0.6916,205.6075,9.3458,22.0000,1.0000,4.5455,0.0000,0.0093,0.0455,0.2056
+
+THREAD SUMMARY
+THREAD,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","IcCacheFillL2","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE",THREAD ID
+"Thread-13460 (PID:5396)",73.0000,105.0000,1.4384,0.6952,200.0000,9.5238,21.0000,1.0000,4.7619,0.0000,0.0095,0.0476,0.2000,"13460"
+"Thread-13192 (PID:5396)",1.0000,2.0000,2.0000,0.5000,500.0000,0.0000,1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.5000,"13192"
+
+
+MODULE SUMMARY
+MODULE,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","IcCacheFillL2","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE"
+c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe,71.0000,105.0000,1.4789,0.6762,200.0000,9.5238,21.0000,1.0000,4.7619,0.0000,0.0095,0.0476,0.2000
+c:\windows\system32\ucrtbase.dll,2.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000
+c:\windows\system32\ntdll.dll,1.0000,2.0000,2.0000,0.5000,500.0000,0.0000,1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.5000
+
+
+FUNCTION SUMMARY
+FUNCTION,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","IcCacheFillL2","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE",MODULE
+"Disassembler::DoIt(void)",71.0000,105.0000,1.4789,0.6762,200.0000,9.5238,21.0000,1.0000,4.7619,0.0000,0.0095,0.0476,0.2000,c:\users\s1mple\dev\cpp\pe-visualizer\x64\release\pe-visualizer.exe
+"ucrtbase.dll!0x1800b3d87",2.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,c:\windows\system32\ucrtbase.dll
+"ntdll.dll!0x18003acfb",1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,c:\windows\system32\ntdll.dll
+"ntdll.dll!0x18003b063",0.0000,1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,c:\windows\system32\ntdll.dll
+"ntdll.dll!0x18003ad04",0.0000,1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,c:\windows\system32\ntdll.dll
+"ntdll.dll!0x18003ac19",0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,c:\windows\system32\ntdll.dll
+
+Function Detail Data
+Function,File,Line,SourceCode,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","IcCacheFillL2","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE"
+"Disassembler::DoIt(void)",,,,71.0000,105.0000,1.4789,0.6762,200.0000,9.5238,21.0000,1.0000,4.7619,0.0000,0.0095,0.0476,0.2000
+,C:\Users\s1mple\dev\cpp\pe-visualizer\Source\Disassembly\Disassembler.cpp,35,"  while(!InstructionEncoding.empty())",2.0000,8.0000,4.0000,0.2500,250.0000,0.0000,2.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.2500
+,,37,"    PrefixScanner(InstructionEncoding);",31.0000,52.0000,1.6774,0.5962,211.5385,0.0000,11.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.2115
+,,38,"    OpcodeResult Opcode = OpcodeScanner(InstructionEncoding);",3.0000,6.0000,2.0000,0.5000,166.6667,0.0000,1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.1667
+,,40,"    InstructionDesc OpcodeMetadata = OPCODE_TABLE[std::to_integer<std::uint8_t>(Opcode.Bytes[0])];",1.0000,2.0000,2.0000,0.5000,1000.0000,0.0000,2.0000,0.0000,0.0000,0.0000,0.0000,0.0000,1.0000
+,,42,"    if(OpcodeMetadata.ModRM)",4.0000,2.0000,0.5000,2.0000,500.0000,0.0000,1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.5000
+,,46,"      ModRM ModRM         = ModRMScanner(ModRMByte);",0.0000,1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000
+,,47,"      InstructionEncoding = InstructionEncoding.subspan(1);",7.0000,12.0000,1.7143,0.5833,250.0000,0.0000,3.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.2500
+,,49,"      BuildModRMInstruction(ModRM, OpcodeMetadata, InstructionEncoding);",23.0000,22.0000,0.9565,1.0455,45.4545,45.4545,1.0000,1.0000,100.0000,0.0000,0.0455,1.0000,0.0455
+
+Function,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","IcCacheFillL2","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE"
+"ucrtbase.dll!0x1800b3d87" (SYSTEM MODULE FUNCTION),2.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000
+
+Function,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","IcCacheFillL2","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE"
+"ntdll.dll!0x18003acfb" (SYSTEM MODULE FUNCTION),1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000
+
+Function,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","IcCacheFillL2","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE"
+"ntdll.dll!0x18003b063" (SYSTEM MODULE FUNCTION),0.0000,1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000
+
+Function,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","IcCacheFillL2","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE"
+"ntdll.dll!0x18003ad04" (SYSTEM MODULE FUNCTION),0.0000,1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000
+
+Function,"CYCLES_NOT_IN_HALT","RETIRED_INST","IPC","CPI","RETIRED_BR_INST (PTI)","RETIRED_BR_INST_MISP (PTI)","RETIRED_BR_INST","RETIRED_BR_INST_MISP","%RETIRED_BR_INST_MISP","IcCacheFillL2","RETIRED_BR_INST_MISP_RATE","RETIRED_BR_INST_MISP_RATIO","RETIRED_BR_INST_RATE"
+"ntdll.dll!0x18003ac19" (SYSTEM MODULE FUNCTION),0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000
+

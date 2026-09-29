@@ -71,7 +71,6 @@
   X(FS, "fs")                                                                                                          \
   X(GS, "gs")                                                                                                          \
   X(CR0, "cr0")                                                                                                        \
-  X(CR1, "cr1")                                                                                                        \
   X(CR2, "cr2")                                                                                                        \
   X(CR3, "cr3")                                                                                                        \
   X(CR4, "cr4")                                                                                                        \
@@ -81,27 +80,24 @@
   X(RFLAGS, "rflags")                                                                                                  \
   X(EFLAGS, "eflags")
 
-enum class Register : std::uint16_t
+enum class Register : std::uint8_t
 {
 #define X(name, string) name,
   REGISTER_LIST(X)
 #undef X
+      count
 };
 
-constexpr std::string_view ToString(Register Value) noexcept
-{
-  switch(Value)
-  {
-#define X(name, string)                                                                                                \
-  case Register::name:                                                                                                 \
-    return string;
-
+static constexpr std::array<std::string_view, static_cast<std::size_t>(Register::count)> REGISTER_STRINGS{
+#define X(name, string) string,
     REGISTER_LIST(X)
-
 #undef X
-  }
+};
 
-  return "unknown";
+constexpr std::string_view to_string(Register value) noexcept
+{
+  assert(static_cast<std::uint8_t>(value) < static_cast<std::uint8_t>(Register::count) && "out of bound register access");
+  return REGISTER_STRINGS[static_cast<std::uint8_t>(value)];
 }
 
 struct GrpRegisters
@@ -130,7 +126,7 @@ static constexpr GrpRegisters GRP_REGISTER_TABLE[16] = {
     {.reg64 = Register::R15, .reg32 = Register::R15D, .reg16 = Register::R15W},
 };
 
-static constexpr Register ResolveRegister(std::uint8_t encoding, OperandSize opsize) noexcept
+static constexpr Register resolve_gp_register(std::uint8_t encoding, OperandSize opsize) noexcept
 {
   assert(encoding < 16 && "there exists only 16 general purpose registers");
 

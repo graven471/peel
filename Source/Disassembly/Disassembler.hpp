@@ -2,22 +2,23 @@
 
 #include "Parser/PETypes.hpp"
 #include "x86-64/Registers.hpp"
-#include <format>
+
 #include <cassert>
+#include <format>
 
 struct InstructionDesc;
 
 struct OpcodeResult
 {
-  std::array<std::byte, 3> Bytes{};
-  std::uint8_t             Length{};
+  std::array<std::byte, 3> bytes{};
+  std::uint8_t             length{};
 };
 
 struct ModRM
 {
-  std::uint8_t Mod{};
-  std::uint8_t Reg{};
-  std::uint8_t Rm{};
+  std::uint8_t mod{};
+  std::uint8_t reg{};
+  std::uint8_t rm{};
 };
 
 enum class ModRMField : std::uint8_t
@@ -36,32 +37,34 @@ enum class ModRMMode : std::uint8_t
 
 struct ModRMOperandInfo
 {
-  ModRMField Destination;
-  ModRMField Source;
+  ModRMField destination;
+  ModRMField source;
 
-  ModRMMode Mode;
+  ModRMMode mode;
 
-  Register Reg;
-  Register Rm;
+  Register reg;
+  Register rm;
 };
 
 struct SIB
 {
-  //The scale field is used to specify the scale factor used in computing the
-  //scale* index portion of the effective
-  //address.In normal usage scale represents the size of data elements in an array expressed in number of bytes.
-  std::int8_t Scale{-1};
-  //The index field is used to specify the register containing the index portion of
-  //the indexed register - indirect effective address
-  std::int8_t Index{-1};
-  //The base field is used to specify the register containing the base address
-  //portion of the indexed register - indirect effective address
-  std::int8_t Base{};
+  // The scale field is used to specify the scale factor used in computing the
+  // scale * index portion of the effective address. In normal usage scale
+  // represents the size of data elements in an array expressed in number of bytes.
+  std::int8_t scale{-1};
+
+  // The index field is used to specify the register containing the index portion
+  // of the indexed register-indirect effective address.
+  std::int8_t index{-1};
+
+  // The base field is used to specify the register containing the base address
+  // portion of the indexed register-indirect effective address.
+  std::int8_t base{};
 
   constexpr std::uint8_t decode_scale() const noexcept
   {
     constexpr std::uint8_t table[] = {1, 2, 4, 8};
-    return table[Scale & 0b11];
+    return table[scale & 0b11];
   }
 };
 
@@ -72,17 +75,11 @@ struct EffectiveAddress
   SIB          sib{};
   std::int32_t displacement{};
 
-  bool is_sib() const noexcept { return sib.Base != -1 && sib.Index != -1 && sib.Scale != 0; }
+  bool is_sib() const noexcept { return sib.base != -1 && sib.index != -1 && sib.scale != 0; }
 
   // this does not belong here
-  std::string render_sib(OperandSize size, bool address_override_prefix, const ImageNTHeaders& nt_headers, const ModRM& modrm) const noexcept
+  std::string render_sib(OperandSize size, bool address_override_prefix, const ImageNTHeaders& nt_headers, const ModRM& mod_rm) const noexcept
   {
-    // 67H(address_override_prefix) prefix can overwrite this
-    // manual has defined like this:
-    // long-mode mode default size 64-bit, ea = 64-bit, 67H required no
-    // compatibility mode default size 32-bit, ea = 32-bit with 67H its 16-bit
-    // protected-mode or real mode default size 32-bit or 16-bit ea = 32-bit or 16-bit with 67h
-
     auto build_instruction = [&](OperandSize op_size) -> std::string {
       std::string expression = "[";
 
@@ -91,7 +88,7 @@ struct EffectiveAddress
         // this is special case
         // in long mode mode this maps to [RIP + disp32]
         // in compatibility mode it maps to disp32
-        if(modrm.Mod == 0 && modrm.Rm == 5)
+        if(mod_rm.mod == 0 && mod_rm.rm == 5)
         {
           // RIP-relative or disp32
           if(nt_headers.FileHeader.Machine == MachineType::MACHINE_AMD64)
@@ -102,29 +99,32 @@ struct EffectiveAddress
         else
         {
           // regular [reg] or [reg + disp]
-          expression += ToString(ResolveRegister(modrm.Rm, op_size));
+          expression += to_string(resolve_gp_register(mod_rm.rm, op_size));
+
           if(displacement != 0)
+          {
             displacement < 0 ? expression += std::format(" - 0x{:x}", std::abs(displacement)) :
                                expression += std::format(" + 0x{:x}", displacement);
+          }
         }
 
         expression += "]";
         return expression;
       }
 
-      if(sib.Base != -1)
+      if(sib.base != -1)
       {
-        expression += ToString(ResolveRegister(static_cast<std::uint8_t>(sib.Base), op_size));
+        expression += to_string(resolve_gp_register(static_cast<std::uint8_t>(sib.base), op_size));
         expression += " + ";
       }
 
-      if(sib.Index != -1)
+      if(sib.index != -1)
       {
-        expression += ToString(ResolveRegister(static_cast<std::uint8_t>(sib.Index), op_size));
+        expression += to_string(resolve_gp_register(static_cast<std::uint8_t>(sib.index), op_size));
         expression += "*";
       }
 
-      sib.Scale == 0 ? expression += "1" : expression += std::to_string(sib.decode_scale());
+      sib.scale == 0 ? expression += "1" : expression += std::to_string(sib.decode_scale());
 
       if(displacement != 0)
       {
@@ -139,7 +139,7 @@ struct EffectiveAddress
 
     if(nt_headers.FileHeader.Machine == MachineType::MACHINE_AMD64 && nt_headers.Format == PEFormat::PE64) [[likely]]
     {
-      // in this case the operating mode is 64-bit but 67H prefix is address override prefix
+      // in this case the operating mode is 64-bit but 67H is address override prefix
       // according to manual if we are in 64-bit mode and if 67H is in instruction prefix
       // then we should use 32-bit as address-size
 
@@ -155,25 +155,26 @@ struct EffectiveAddress
     //}
 
     return build_instruction(address_override_prefix ? OperandSize::Bits16 : OperandSize::Bits32);
-  };
+  }
 };
 
 class Disassembler
 {
 public:
-  explicit Disassembler(PEImage* InImage)
-      : Image(InImage) {};
+  explicit Disassembler(PEImage* image)
+      : image(image) {};
 
-  void DoIt();
+  void do_it();
 
 private:
-  void             PrefixScanner(std::span<const std::byte>& Bytes);
-  OpcodeResult     OpcodeScanner(std::span<const std::byte>& Bytes);
-  ModRM            ModRMScanner(const std::byte Byte);
-  ModRMOperandInfo ResolveModRM(const ModRM& ModRm, const InstructionDesc& MetaData);
-  SIB              GetSibFromByte(std::uint8_t Byte, std::uint8_t mod);
-  void BuildModRMInstruction(const ModRM& ModRm, const InstructionDesc& MetaData, std::span<const std::byte>& Bytes);
+  void             prefix_scanner(std::span<const std::byte>& bytes);
+  OpcodeResult     opcode_scanner(std::span<const std::byte>& bytes);
+  ModRM            mod_rm_scanner(const std::byte byte);
+  ModRMOperandInfo resolve_mod_rm(const ModRM& mod_rm, const InstructionDesc& metadata);
+  SIB              get_sib_from_byte(std::uint8_t byte, std::uint8_t mod);
+
+  void build_mod_rm_instruction(const ModRM& mod_rm, const InstructionDesc& metadata, std::span<const std::byte>& bytes);
   void build_immediate_instruction(const InstructionDesc& metadata, std::span<const std::byte>& bytes);
 
-  PEImage* Image = nullptr;
+  PEImage* image = nullptr;
 };

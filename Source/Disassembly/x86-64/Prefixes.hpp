@@ -39,7 +39,7 @@ constexpr std::array LegacyGroup2Prefixes = {std::byte{0x2E}, std::byte{0x36}, s
 constexpr std::byte LegacyGroup3Prefix = std::byte{0x66};
 constexpr std::byte LegacyGroup4Prefix = std::byte{0x67};
 
-enum class PrefixType : std::uint8_t
+enum class Prefixtype : std::uint8_t
 {
   GROUP1,
   GROUP2,
@@ -51,7 +51,7 @@ enum class PrefixType : std::uint8_t
 
 struct PrefixMetadata
 {
-  PrefixType Type{PrefixType::NONE};
+  Prefixtype type{Prefixtype::NONE};
   bool       is_prefix{false};
 };
 
@@ -61,20 +61,20 @@ static consteval std::array<PrefixMetadata, 256> build_prefix_table() noexcept
 
   for(auto b : LegacyGroup1Prefixes)
   {
-    table[std::to_integer<std::uint8_t>(b)] = {.Type = PrefixType::GROUP1, .is_prefix = true};
+    table[std::to_integer<std::uint8_t>(b)] = {.type = Prefixtype::GROUP1, .is_prefix = true};
   }
 
   for(auto b : LegacyGroup2Prefixes)
   {
-    table[std::to_integer<std::uint8_t>(b)] = {.Type = PrefixType::GROUP2, .is_prefix = true};
+    table[std::to_integer<std::uint8_t>(b)] = {.type = Prefixtype::GROUP2, .is_prefix = true};
   }
 
-  table[std::to_integer<std::uint8_t>(LegacyGroup3Prefix)] = {.Type = PrefixType::GROUP3, .is_prefix = true};
-  table[std::to_integer<std::uint8_t>(LegacyGroup4Prefix)] = {.Type = PrefixType::GROUP4, .is_prefix = true};
+  table[std::to_integer<std::uint8_t>(LegacyGroup3Prefix)] = {.type = Prefixtype::GROUP3, .is_prefix = true};
+  table[std::to_integer<std::uint8_t>(LegacyGroup4Prefix)] = {.type = Prefixtype::GROUP4, .is_prefix = true};
 
   for(auto b : RexPrefix)
   {
-    table[std::to_integer<std::uint8_t>(b)] = {.Type = PrefixType::REX, .is_prefix = true};
+    table[std::to_integer<std::uint8_t>(b)] = {.type = Prefixtype::REX, .is_prefix = true};
   }
 
   return table;
@@ -83,42 +83,6 @@ static consteval std::array<PrefixMetadata, 256> build_prefix_table() noexcept
 static constexpr std::array<PrefixMetadata, 256> PREFIX_TABLE = build_prefix_table();
 
 // test data
-constexpr std::array<std::byte, 15> TestBytes{
-    std::byte{0x48},  // REX
-    std::byte{0x64},  // Group 2
-    std::byte{0x8B},  // stop
-    std::byte{0x0F},  // shouldn't be reached by prefix scanner
-    std::byte{0x66}, std::byte{0x67}, std::byte{0x4C}, std::byte{0x90}, std::byte{0x00}, std::byte{0x00},
-    std::byte{0x00}, std::byte{0x00}, std::byte{0x00}, std::byte{0x00}, std::byte{0x00},
-};
-
-// 1-byte opcode: NOP (0x90)
-constexpr std::array<std::byte, 5> Test1ByteOpcode{
-    std::byte{0x48}, std::byte{0x90},                   // opcode = 0x90 (NOP)
-    std::byte{0x00}, std::byte{0x00}, std::byte{0x00},  // padding
-};
-
-// map1: MOVSX r64, r/m16 (0F BF)
-constexpr std::array<std::byte, 6> TestMap1Opcode{
-    std::byte{0x48}, std::byte{0x66}, std::byte{0x0F},  // escape
-    std::byte{0xBF},                                    // opcode
-    std::byte{0x00}, std::byte{0x00},                   // padding
-};
-
-constexpr std::array<std::byte, 4> TestMovsx{
-    std::byte{0x48},  // REX.W (64-bit destination)
-    std::byte{0x0F},  // escape
-    std::byte{0xBF},  // opcode MOVSX
-    std::byte{0xC3},  // ModR/M: mod=11 reg=000 rm=011 -> rax, rbx
-};
-
-constexpr std::array<std::byte, 5> TestMap3Opcode{
-    std::byte{0x65}, std::byte{0x0F},  // escape
-    std::byte{0x3A},                   // map3 select
-    std::byte{0x08},                   // opcode
-    std::byte{0x00},                   // padding
-};
-
 // 48 8B 44 8C 10 => MOV RAX, [RSP + RCX * 4 + 0x10]
 constexpr std::array<std::byte, 4> TestModRMOpcode{std::byte{0x8B}, std::byte{0x44}, std::byte{0x8C}, std::byte{0x10}};
 

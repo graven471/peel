@@ -19,17 +19,17 @@ constexpr std::byte OPCODE_MAP2_SELECT = std::byte{0x38};
 // OF 3A XX opcode map
 constexpr std::byte OPCODE_MAP3_SELECT = std::byte{0x3A};
 
-constexpr std::array<std::byte, 2> BuildTwoBytesOpcode(const std::byte Opcode) noexcept
+constexpr std::array<std::byte, 2> build_two_bytes_opcode(const std::byte Opcode) noexcept
 {
   return std::array{OPCODE_ESCAPE, Opcode};
 }
 
-constexpr std::array<std::byte, 3> BuildOpcodeMap2(const std::byte Opcode) noexcept
+constexpr std::array<std::byte, 3> build_opcode_map2(const std::byte Opcode) noexcept
 {
   return std::array{OPCODE_ESCAPE, OPCODE_MAP2_SELECT, Opcode};
 }
 
-constexpr std::array<std::byte, 3> BuildOpcodeMap3(const std::byte Opcode) noexcept
+constexpr std::array<std::byte, 3> build_opcode_map3(const std::byte Opcode) noexcept
 {
   return std::array{OPCODE_ESCAPE, OPCODE_MAP3_SELECT, Opcode};
 }
