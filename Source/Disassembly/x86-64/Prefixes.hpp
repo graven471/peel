@@ -39,6 +39,58 @@ constexpr std::array LegacyGroup2Prefixes = {std::byte{0x2E}, std::byte{0x36}, s
 constexpr std::byte LegacyGroup3Prefix = std::byte{0x66};
 constexpr std::byte LegacyGroup4Prefix = std::byte{0x67};
 
+enum class PrefixType : std::uint8_t
+{
+  GROUP1,
+  GROUP2,
+  GROUP3,
+  GROUP4,
+  REX,
+  NONE
+};
+
+struct PrefixMetadata
+{
+  PrefixType Type{PrefixType::NONE};
+  bool       is_prefix{false};
+};
+
+static constexpr std::array<PrefixMetadata, 256> build_prefix_table() noexcept
+{
+
+  std::array<PrefixMetadata, 256> table{};
+
+  for(auto b : LegacyGroup1Prefixes)
+  {
+    table[std::to_integer<std::uint8_t>(b)] = {.Type = PrefixType::GROUP1, .is_prefix = true};
+  }
+
+  for(auto b : LegacyGroup2Prefixes)
+  {
+    table[std::to_integer<std::uint8_t>(b)] = {.Type = PrefixType::GROUP2, .is_prefix = true};
+  }
+
+  table[std::to_integer<std::uint8_t>(LegacyGroup3Prefix)] = {.Type = PrefixType::GROUP3, .is_prefix = true};
+  table[std::to_integer<std::uint8_t>(LegacyGroup4Prefix)] = {.Type = PrefixType::GROUP4, .is_prefix = true};
+
+  for(auto b : RexPrefix)
+  {
+    table[std::to_integer<std::uint8_t>(b)] = {.Type = PrefixType::REX, .is_prefix = true};
+  }
+
+  return table;
+}
+
+static constexpr std::array<PrefixMetadata, 256> PREFIX_TABLE = build_prefix_table();
+
+static constexpr std::array PREFIXES = {
+    std::byte{0x40}, std::byte{0x41}, std::byte{0x42}, std::byte{0x43}, std::byte{0x44}, std::byte{0x45},
+    std::byte{0x46}, std::byte{0x47}, std::byte{0x48}, std::byte{0x49}, std::byte{0x4A}, std::byte{0x4B},
+    std::byte{0x4C}, std::byte{0x4D}, std::byte{0x4E}, std::byte{0x4F}, std::byte{0xF0}, std::byte{0xF2},
+    std::byte{0xF3}, std::byte{0x2E}, std::byte{0x36}, std::byte{0x3E}, std::byte{0x26}, std::byte{0x64},
+    std::byte{0x65}, std::byte{0x66}, std::byte{0x67},
+};
+
 constexpr bool IsPrefix(const std::byte byte) noexcept
 {
   return std::ranges::contains(LegacyGroup1Prefixes, byte) || std::ranges::contains(LegacyGroup2Prefixes, byte)

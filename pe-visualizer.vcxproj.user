@@ -16,5 +16,6 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LocalDebuggerCommandArguments>C:\Windows\System32\notepad.exe</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerCommandArgumentsHistory>C:\Windows\System32\notepad.exe|</LocalDebuggerCommandArgumentsHistory>
   </PropertyGroup>
 </Project>

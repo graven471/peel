@@ -34,24 +34,18 @@ void Disassembler::DoIt()
 
   while(!InstructionEncoding.empty())
   {
-    // fetches the prefix if available and slides the InstructionEncoding to after prefix
-    // e.g. if prefix is 2-bytes then InstructionEncoding will be subspan(2, ...)
     PrefixScanner(InstructionEncoding);
     OpcodeResult Opcode = OpcodeScanner(InstructionEncoding);
 
-    // todo: abstract this into some metadata lookup function
     InstructionDesc OpcodeMetadata = OPCODE_TABLE[std::to_integer<std::uint8_t>(Opcode.Bytes[0])];
 
     if(OpcodeMetadata.ModRM)
     {
       const std::byte ModRMByte = InstructionEncoding[0];
-      //std::println("ModR/M is 0x{:02x}", std::to_integer<uint8_t>(ModRMByte));
 
-      ModRM ModRM = ModRMScanner(ModRMByte);
-      // slide InstructionEncoding to point after ModR/M byte
+      ModRM ModRM         = ModRMScanner(ModRMByte);
       InstructionEncoding = InstructionEncoding.subspan(1);
 
-      // pass Bytes so that it can read disp{8,32} and slide it
       BuildModRMInstruction(ModRM, OpcodeMetadata, InstructionEncoding);
     }
     else
@@ -63,106 +57,33 @@ void Disassembler::DoIt()
 
 void Disassembler::PrefixScanner(std::span<const std::byte>& Bytes)
 {
-  // for I in instruction encoding:
-  //   is I in legacy group 1-4 prefix ?
-  //   is I in REX prefix ?
-  //   if I is prefix then push I to somewhere (yet to be defined)
-  //   go to next byte I + 1 check if its in prefix
-  //   repeat until we found something that is not prefix
-  //   if not stop and return subspan from there
-  //   [2E 66 3E 48 8B 05 E7 33 03]
-  //    ----------- |
-  //    prefix      new subspan loc
+  auto                          prefix_bytes = Bytes.first(std::min<std::size_t>(5, Bytes.size()));
+  std::uint8_t                  prefix_count{0};
+  std::array<PrefixMetadata, 5> prefixes{};
 
-  // PrefixEnd == pos where NOT isPrefix for example like take
-  // [2E 66 3E 48 8B 05 E7 33 03]
-  //  |---------|
-  //    prefix    ^
-  //               prefix_end
 
-  // it will walk it through for each iteration it checks !IsPrefix(idx)
-  // IsPrefix(2E) -> true -> continue
-  // IsPrefix(66) -> true -> continue
-  // IsPrefix(3E) -> true -> continue
-  // IsPrefix(48) -> true -> continue
-  // IsPrefix(8B) -> false -> stop
-  // so it stops and gives the index in this case 4
+  for(std::uint8_t index = 0; index < prefix_bytes.size(); ++index)
+  {
+    auto meta = PREFIX_TABLE[std::to_integer<std::uint8_t>(prefix_bytes[index])];
 
-  // PrefixEnd is an Iterator pointing to 4th element in span
-  auto PrefixEnd = std::ranges::find_if_not(Bytes, IsPrefix);
+    if(meta.is_prefix)
+    {
+      prefixes[index] = PrefixMetadata{.Type = meta.Type, .is_prefix = true};
+      prefix_count++;
+    }
+    else
+    {
+      break;
+    }
+  }
 
-  // let PrefixEnd be &Data[N]
-  // let begin() = &Data[0]
-  // PrefixCount = N - 0 => N
-  auto PrefixCount = PrefixEnd - Bytes.begin();
+  assert(prefix_count <= 5);
 
-  // let PrefixCount = N, where N <= Data.size()
-  // then Prefixes is a new view into Data from
-  // assuming PrefixCount = PrefixEnd - Data.begin(), where Data.begin() == 0
-  // [X.......N] where X represents some byte
-  // first = give me first N elements of this span
-  std::span<const std::byte> Prefixes = Bytes.first(PrefixCount);
-
-  // let PrefixCount = N, where N <= Data.size()
-  // then then Instruction is a new view into Data
-  // from PrefixCount...Data.size()
-  // conceptually
-  // [N....Data.size()]
-  //std::span<const std::byte> Rest = TestBytesSpan.subspan(PrefixCount);
-
-  // slide the instruction window should point to opcode now
-  Bytes = Bytes.subspan(PrefixCount);
-
-  // todo: have some kind of structure or data that stores prefixes and group
-  //for(size_t I = 0; I < Prefixes.size(); I++)
-  //{
-  //  std::print("Prefix: 0x{:02x} ", std::to_integer<uint8_t>(Prefixes[I]));
-  //}
+  Bytes = Bytes.subspan(prefix_count);
 }
 
-// note some opcode requires ModR/M and some don't so i have return
-// the info somehow that does opcode needs ModR/M or not
 OpcodeResult Disassembler::OpcodeScanner(std::span<const std::byte>& Bytes)
 {
-  // we are assuming that the Bytes[0] will be valid x86-64 opcode
-  // opcode can be either 1 byte or 2 bytes or 3 bytes
-  // an additional 3-bit opcode field is sometimes encoded in the ModR/M byte
-
-  // if opcode is 2-bytes then:
-  // important values are: 0x0F escape opcode byte as the primary opcode and a
-  // second opcode byte.
-  // mandatory prefix: (0x66, 0xF2, 0xF3), an escape opcode byte, and a second
-  // opcode byte
-
-  // For example, CVTDQ2PD consists of the following sequence: F3 0F E6. The
-  // first byte is a mandatory prefix (it is not considered as a repeat prefix).
-
-  // so if first opcode byte is 0xF then the opcode is just 1-byte
-  // otherwise i have to read another byte
-
-  // if opcode is 3-bytes then:
-  // an escape opcode byte is 0xF as the primary opcode, plus two additional
-  // opcode bytes.
-  // a mandatory prefix (0x66, 0xF2, or 0xF3), an escape opcode byte
-
-  // For example, PHADDW for XMM registers consists of the following sequence:
-  // 0x66 0x0F 0x38 0x01. The first byte is the mandatory prefix.
-
-  // escape opcodes are 0x0F, 0x0F 0x38
-
-  // implementation
-
-  /*
-    if opcode[0] = 0x0F then read another opcode[1]
-    MAP = 0x0F xx
-    else stop and opcode_length = 1
-
-    if opcode[1] = 0x38 or 0x3A then read opcode[2]
-       if 0x38 then MAP = 0x0F 0x38 xx
-       else if 0x3A then MAP = 0x0F 0x3A xx
-    else stop opcode_length = 2
-  */
-
   assert(!Bytes.empty());
 
   if(Bytes[0] != OPCODE_ESCAPE)
@@ -209,57 +130,6 @@ ModRM Disassembler::ModRMScanner(const std::byte Byte)
     example: 11 001 100
              |   |   |
             mod  reg  r/m
-
-  mod -> defines how we should treat r/m bits the values are:
-
-  11 -> treat r/m as general purpose register
-  00 -> treat r/m as memory address
-  01 -> then assuming AMD64 mode treat r/m as [base_register + disp8]
-  10 -> then assuming AMD64 mode treat r/m as [base_register + disp32]
-  
-  mod = 00, r/m = 101 is special one in AMD64 it means treat r/m as [RIP + disp32]
-
-  reg -> note some modr/m can have opcode extension instead of /r something like /1 .. /7
-  but assuming /r this maps to general purpose registers and registers width depends on architecture
-  000 -> AX, EAX, RAX
-  001 -> CX, ECX, RCX
-  ...
-  111 -> DI, EDI, RDI
-
-  example: Byte = 1100 1000 (0xC8)
-
-  mod = 11  ->  register access
-  reg = 001 -> RCX,EDX etc depends on architecture
-  r/m = 000 -> and since mod = 11 we should treat this as register so RAX,EAX etc
-
-
-  so how to translate this in code
-
-  i want:
-
-  uint8_t mod = 11
-  uint8_t reg = 001
-  uint8_t rm = 000
-
-  `w = x - n + 1` where x is the highest bit and n is the lowest bit
-
-  mask = ((1 <= w) - 1) << n, where w = ones
-
-  field = (Byte & mask) >= n
-
-  mod: x = 7, n = 6
-  mask = ((1 << 2) - 1) << 6
-       = 0b11 << 6
-       = 1100 0000 (0xC0)
-
-   reg: x=5, n=3
-   mask = ((1 << 3) - 1) << 3
-     = 0b111 << 3
-     = 0011 1000 (0x38)
-
-  r/m: x=2, n=0
-  mask = ((1 << 3) - 1) << 0
-       = 0000 0111 (0x7)
   */
 
   const std::uint8_t Value = std::to_integer<std::uint8_t>(Byte);
@@ -324,24 +194,6 @@ ModRMOperandInfo Disassembler::ResolveModRM(const ModRM& ModRm, const Instructio
 
 SIB Disassembler::GetSibFromByte(std::uint8_t Byte, std::uint8_t mod)
 {
-  // the SIB is defined like this
-  // bits 7:6 => scale
-  // bits 5:3 => index
-  // bits 2:0 => base
-
-  // so to read scale shift it right by 6 so index 7 becomes 1 and index 6 becomes 0
-  // then apply AND operation with a mask where mask bits is 1 for target
-  // here out target bits index is 0 and 1
-  // so mask = 0b00000011 (0x3)
-
-  // same for index shift right by 3 so that 5 index changes to 2, 4 changes to 1 and 3 changes to 0
-  // then apply AND operation using a mask where bit index 2..0 is 1 and everything else 0
-  // so mask = 0b00000111 (0x7)
-
-  // we don't need to shift for index since its already at right most just apply a mask where
-  // bits 0..2 is 1 and everything else 0 and collect in u8
-  // so mask = 0b00000111 (0x7)
-
   return SIB{
       .Scale = static_cast<std::int8_t>((Byte >> 6) & 0x03),
       .Index = static_cast<std::int8_t>(((Byte >> 3) & 0x07) == 0b100 ? -1 : (Byte >> 3) & 0x07),
@@ -356,9 +208,6 @@ void Disassembler::BuildModRMInstruction(const ModRM& ModRm, const InstructionDe
 
   auto build_base_address = [&]() -> EffectiveAddress {
     EffectiveAddress effective_address{};
-    // either disp exists or does not
-    // if no disp then its just [base*index + scale]
-    // otherwise [base*index + scale + disp{8,32}]
 
     // sib exists iff mod != register and rm = 100
     if(Info.Mode != ModRMMode::Register && ModRm.Rm == 4)
@@ -389,17 +238,17 @@ void Disassembler::BuildModRMInstruction(const ModRM& ModRm, const InstructionDe
   std::string      DestinationRegister = Info.Destination == ModRMField::Rm ? ToString(Info.Rm) : ToString(Info.Reg);
   EffectiveAddress effective_address   = build_base_address();
 
-  std::println("{} {}, {}", Mnemonic, DestinationRegister,
-               Info.Mode == ModRMMode::Register ?
-                   SourceRegister :
-                   effective_address.render_sib(OperandSize::Bits64, false, Image->NTHeaders, ModRm));
+  //std::println("{} {}, {}", Mnemonic, DestinationRegister,
+  //             Info.Mode == ModRMMode::Register ?
+  //                 SourceRegister :
+  //                 effective_address.render_sib(OperandSize::Bits64, false, Image->NTHeaders, ModRm));
 }
 
 void Disassembler::build_immediate_instruction(const InstructionDesc& metadata, std::span<const std::byte>& bytes)
 {
   if(metadata.Destination == OperandCode::Iv || metadata.Destination == OperandCode::Iz || metadata.Source == OperandCode::Ib
-     || metadata.Source == OperandCode::Iv || metadata.Source == OperandCode::Iz || metadata.Source == OperandCode::Ib)
+     || metadata.Source == OperandCode::Iv || metadata.Source == OperandCode::Iz || metadata.Source == OperandCode::Ib) [[likely]]
   {
-    std::println("imm: {:x}", std::to_integer<uint8_t>(bytes[0]));
+    //std::println("imm: {:x}", std::to_integer<uint8_t>(bytes[0]));
   }
 }

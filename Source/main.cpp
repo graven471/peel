@@ -22,27 +22,29 @@
 #include "Disassembly/Disassembler.hpp"
 #include "Parser/Parser.hpp"
 
-[[nodiscard]] static PeelResult<std::span<const std::byte>> MapFile(
-    const std::string& InFileName) {
+[[nodiscard]] static PeelResult<std::span<const std::byte>> MapFile(const std::string& InFileName)
+{
   // use A prefix for now
-  HANDLE HFile = CreateFileA(InFileName.c_str(), GENERIC_READ, NULL, NULL,
-                             OPEN_EXISTING, FILE_ATTRIBUTE_READONLY, NULL);
+  HANDLE HFile = CreateFileA(InFileName.c_str(), GENERIC_READ, NULL, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_READONLY, NULL);
 
-  if (HFile == INVALID_HANDLE_VALUE) {
+  if(HFile == INVALID_HANDLE_VALUE)
+  {
     return std::unexpected(MakeWin32Error(::GetLastError()));
   }
 
   // get the file size
   LARGE_INTEGER FileSize;
 
-  if (GetFileSizeEx(HFile, &FileSize) == 0) {
+  if(GetFileSizeEx(HFile, &FileSize) == 0)
+  {
     return std::unexpected(MakeWin32Error(::GetLastError()));
   }
 
   // create file mapping aka describing backing store
   HANDLE HMapping = CreateFileMapping(HFile, NULL, PAGE_READONLY, 0, 0, NULL);
 
-  if (HMapping == NULL) {
+  if(HMapping == NULL)
+  {
     CloseHandle(HFile);
     return std::unexpected(MakeWin32Error(::GetLastError()));
   }
@@ -53,38 +55,38 @@
   // map the file contents into this process virtual address space
   LPVOID BasePtr = MapViewOfFile(HMapping, FILE_MAP_READ, 0, 0, 0);
 
-  if (BasePtr == NULL) {
+  if(BasePtr == NULL)
+  {
     return std::unexpected(MakeWin32Error(::GetLastError()));
   }
 
-  return std::span<const std::byte>{
-      static_cast<const std::byte*>(BasePtr),
-      static_cast<std::size_t>(FileSize.QuadPart)};
+  return std::span<const std::byte>{static_cast<const std::byte*>(BasePtr), static_cast<std::size_t>(FileSize.QuadPart)};
 }
 
-int main(int argc, const char* argv[]) {
-  if (argc < 2) {
+int main(int argc, const char* argv[])
+{
+  if(argc < 2)
+  {
     std::println(stderr, "Usage: peel <file.exe>");
     return EXIT_FAILURE;
   }
-
-  // i can use std::string_view here but its not guaranteed to be null
-  // terminated and since most of the time file name will be < 15 chars
-  // internally it can use SSO to avoid heap
   std::string FileName = argv[1];
 
-  if (!FileName.ends_with("exe")) {
+  if(!FileName.ends_with("exe"))
+  {
     std::println(stderr, "PE format is required");
     return EXIT_FAILURE;
   }
 
   std::println("filename: {}", FileName);
 
+  //std::string test = "C:\\Windows\\System32\\notepad.exe";
+
   PeelResult<std::span<const std::byte>> Mapping = MapFile(FileName);
 
-  if (!Mapping) {
-    std::println(stderr, "\033[31mError: \033[0m {}",
-                 Mapping.error().ToString());
+  if(!Mapping)
+  {
+    std::println(stderr, "\033[31mError: \033[0m {}", Mapping.error().ToString());
     return EXIT_FAILURE;
   }
 
@@ -92,14 +94,18 @@ int main(int argc, const char* argv[]) {
 
   PeelResult<PEImage> Image = Parser.Parse();
 
-  if (!Image) {
+  if(!Image)
+  {
     std::println(stderr, "\033[31mError: \033[0m {}", Image.error().ToString());
     return EXIT_FAILURE;
   }
 
-  Disassembler Diasas{&*Image};
+  Disassembler Disas{&*Image};
 
-  Diasas.DoIt();
+  //for(std::size_t i = 0; i < 10'000; ++i)
+  //{
+  Disas.DoIt();
+  //}
 
   return EXIT_SUCCESS;
 }
